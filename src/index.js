@@ -104,13 +104,24 @@ export default {
     if (path === '/api/email-reply' && request.method === 'POST')
       return handleEmailReply(request, env);
 
+    if (path === '/api/action-plan' && request.method === 'GET')
+      return handleActionPlan(request, env);
+
+    if (path === '/api/email-ai' && request.method === 'POST')
+      return handleEmailAI(request, env);
+
+    if (path === '/api/proactive' && request.method === 'POST')
+      return handleProactive(request, env);
+
     // Static assets handled by Cloudflare [assets] config
     return env.ASSETS.fetch(request);
   },
 
-  // ── Cron: roda todo dia útil 10:30 UTC (07:30 BRT) ─────────────
   async scheduled(event, env, ctx) {
-    ctx.waitUntil(sendMorningBriefing(env));
+    const cron = event.cron;
+    if (cron === '30 10 * * 1-5') ctx.waitUntil(sendMorningBriefing(env));
+    if (cron === '0 21 * * 5')    ctx.waitUntil(sendWeeklyReport(env));
+    if (cron === '0 14 * * *')    ctx.waitUntil(runProactiveCheck(env));
   }
 };
 
@@ -417,6 +428,192 @@ const HELP_TEXT = `\x1b[32m╔════════════════�
 
 \x1b[90mDica: setas ↑↓ para histórico, Tab para completar\x1b[0m`;
 
+// ── Action Plan ───────────────────────────────────────────────────
+// GET /api/action-plan — lê feed + tarefas e gera plano com Gemini
+async function handleActionPlan(request, env) {
+  const [feedRaw, tasksRaw] = await Promise.all([
+    env.PULSO_KV.get('site_feed'),
+    env.PULSO_KV.get('tasks')
+  ]);
+
+  const feed  = JSON.parse(feedRaw  || '[]');
+  const tasks = JSON.parse(tasksRaw || '[]');
+  const pending = tasks.filter(t => !t.done);
+
+  // Agrupa feed por tipo para contexto limpo
+  const byType = {};
+  for (const e of feed.slice(0, 30)) {
+    if (!byType[e.type]) byType[e.type] = [];
+    byType[e.type].push({ site: e.site, ...e.data, ts: e.timestamp });
+  }
+
+  const prompt = `${BASE_SYSTEM()}
+
+## Dados atuais dos sites (${new Date().toLocaleDateString('pt-BR')})
+
+${JSON.stringify(byType, null, 2)}
+
+## Tarefas pendentes (${pending.length})
+${pending.map(t => '- ' + t.text).join('\n') || 'Nenhuma'}
+
+## Instrução
+Analise esses dados e gere um PLANO DE AÇÃO para hoje/esta semana.
+Formato:
+🔴 URGENTE (fazer hoje)
+🟡 IMPORTANTE (fazer esta semana)
+🟢 MONITORAR (só acompanhar)
+💡 OPORTUNIDADE (aproveitar agora)
+
+Máximo 12 itens no total. Cada item: 1 linha de ação concreta.
+Priorize pelo impacto nos objetivos 2027.`;
+
+  const res = await gemini(prompt, env);
+  return json({ ok: true, plan: res, generated_at: Date.now() });
+}
+
+// ── Email AI Handler ───────────────────────────────────────────────
+// POST /api/email-ai { email: {from, subject, body, contact_id, site} }
+// Classifica email + sugere resposta + decide ação no CRM
+async function handleEmailAI(request, env) {
+  const { email } = await request.json();
+  if (!email) return json({ ok: false, error: 'sem email' }, 400);
+
+  const prompt = `${BASE_SYSTEM()}
+
+## Email recebido
+De: ${email.from}
+Assunto: ${email.subject}
+Mensagem: ${email.body?.slice(0, 800) || '(sem corpo)'}
+Site: ${email.site || 'desconhecido'}
+
+## Tarefa
+Analise este email e retorne EXATAMENTE este JSON (sem markdown, só JSON):
+{
+  "classificacao": "organizador_concurso|autor|leitor|spam|parceiro|comercial|outro",
+  "urgencia": "alta|media|baixa",
+  "sentimento": "positivo|neutro|negativo|solicitacao",
+  "resumo": "1 frase descrevendo o email",
+  "acao_sugerida": "responder|arquivar|tag_crm|encaminhar|ignorar",
+  "tag_crm": "tag a adicionar no contato se aplicável, ou null",
+  "rascunho_resposta": "rascunho de resposta em PT-BR, ou null se não precisa",
+  "notificar_well": true ou false
+}`;
+
+  const raw = await gemini(prompt, env);
+
+  // Tenta parsear JSON da resposta
+  let analysis = {};
+  try {
+    const match = raw.match(/\{[\s\S]*\}/);
+    if (match) analysis = JSON.parse(match[0]);
+  } catch { analysis = { resumo: raw, urgencia: 'media', notificar_well: true }; }
+
+  // Salva no feed se deve notificar
+  if (analysis.notificar_well) {
+    const feed = JSON.parse(await env.PULSO_KV.get('site_feed') || '[]');
+    feed.unshift({
+      site: email.site || 'email',
+      type: 'email_ai_processed',
+      data: { ...email, analysis },
+      timestamp: Date.now()
+    });
+    await env.PULSO_KV.put('site_feed', JSON.stringify(feed.slice(0, 50)));
+
+    if (analysis.urgencia === 'alta') {
+      await sendPush(env, {
+        title: `📧 ${analysis.urgencia === 'alta' ? '🔴' : ''} Email: ${email.from?.split('@')[0]}`,
+        body: analysis.resumo,
+        url: '/?tab=dia'
+      });
+    }
+  }
+
+  return json({ ok: true, analysis });
+}
+
+// ── Proactive Handler ─────────────────────────────────────────────
+// POST /api/proactive — sites chamam isso para ações proativas
+// O Worker decide o que fazer: notificar, executar, registrar
+async function handleProactive(request, env) {
+  const key = request.headers.get('X-Pulso-Key');
+  if (key !== env.PULSO_SITE_KEY) return json({ ok: false }, 401);
+
+  const { trigger, site, data } = await request.json();
+
+  // Mapa de triggers → ações
+  const actions = {
+    // Concursos
+    'new_concurso_published': async () => {
+      // Sugere email para o organizador via Gemini
+      const draft = await gemini(`${BASE_SYSTEM()}
+Email de parceria para o organizador do concurso "${data.title}".
+Tom: profissional, parceiro. Máximo 4 parágrafos.
+Oferecer: divulgação no site concursosliterarios.net.br (já publicado em ${data.url}).
+Sugerir: parceria futura, divulgação nas redes.
+Assinar como: Well Souza — ConcursosLiterarios.net.br`, env);
+
+      await storeAction(env, 'email_draft', { site, trigger, data, draft });
+      return { action: 'email_draft_created', draft };
+    },
+
+    'resultado_pendente_critico': async () => {
+      // Monta email de cobrança para o organizador
+      const draft = await gemini(`${BASE_SYSTEM()}
+Email cobrando resultado do concurso "${data.title}" (${data.dias_aguardando} dias aguardando).
+Tom: gentil mas firme. Máximo 2 parágrafos.
+Mencionar que o post ainda aparece como "aguardando julgamento" no site.
+Perguntar previsão de divulgação do resultado.`, env);
+
+      await storeAction(env, 'followup_draft', { site, trigger, data, draft });
+      await sendPush(env, {
+        title: '🏆 Resultado pendente — rascunho pronto',
+        body: `${data.title} — ${data.dias_aguardando}d aguardando`,
+        url: '/?tab=dia'
+      });
+      return { action: 'followup_draft_created', draft };
+    },
+
+    'weekly_report': async () => {
+      const feed = JSON.parse(await env.PULSO_KV.get('site_feed') || '[]');
+      const plan = await gemini(`${BASE_SYSTEM()}
+Feed da semana: ${JSON.stringify(feed.slice(0,20))}
+Gere um relatório semanal em 5 bullets com os principais acontecimentos e 2 próximos passos.`, env);
+
+      await sendPush(env, { title: '📊 Relatório semanal pronto', body: 'Abra o Pulso para ver', url: '/?tab=dia' });
+      await storeAction(env, 'weekly_report', { plan, generated_at: Date.now() });
+      return { action: 'weekly_report_created' };
+    }
+  };
+
+  const handler = actions[trigger];
+  if (handler) {
+    const result = await handler();
+    return json({ ok: true, ...result });
+  }
+
+  // Trigger desconhecido — registra e notifica se urgente
+  await storeAction(env, trigger, { site, data });
+  return json({ ok: true, action: 'stored' });
+}
+
+async function storeAction(env, type, data) {
+  const actions = JSON.parse(await env.PULSO_KV.get('pending_actions') || '[]');
+  actions.unshift({ type, data, created: Date.now() });
+  await env.PULSO_KV.put('pending_actions', JSON.stringify(actions.slice(0, 20)));
+}
+
+// ── Gemini helper ─────────────────────────────────────────────────
+async function gemini(prompt, env, maxTokens = 2048) {
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${env.GEMINI_KEY}`,
+    { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { maxOutputTokens: maxTokens, temperature: 0.7 } }) }
+  );
+  const d = await res.json();
+  return d.candidates?.[0]?.content?.parts?.[0]?.text || '';
+}
+
 // ── Morning Briefing ──────────────────────────────────────────────
 async function sendMorningBriefing(env) {
   const [feedRaw, tasksRaw] = await Promise.all([
@@ -464,6 +661,44 @@ Responda apenas com o briefing — foco do dia e o que está pendente. Direto e 
     body: briefingText || `${pendingTasks.length} tarefas hoje`,
     url: '/?tab=dia'
   });
+}
+
+// ── Weekly Report (sexta 18h) ─────────────────────────────────────
+async function sendWeeklyReport(env) {
+  const feed = JSON.parse(await env.PULSO_KV.get('site_feed') || '[]');
+  const tasks = JSON.parse(await env.PULSO_KV.get('tasks') || '[]');
+  const weekEvents = feed.filter(e => Date.now() - e.timestamp < 7 * 86400000);
+
+  const plan = await gemini(`${BASE_SYSTEM()}
+Eventos desta semana nos sites: ${JSON.stringify(weekEvents.slice(0,25))}
+Tarefas concluídas: ${tasks.filter(t=>t.done).length}
+Tarefas pendentes: ${tasks.filter(t=>!t.done).length}
+
+Relatório de sexta em 5 bullets. Depois: 3 prioridades para segunda-feira.
+Tom: direto, analítico, motivador.`, env, 512);
+
+  await env.PULSO_KV.put('weekly_report', JSON.stringify({ plan, generated_at: Date.now() }));
+  await sendPush(env, { title: '📊 Semana encerrada — relatório pronto', body: plan.split('\n')[0], url: '/?tab=dia' });
+}
+
+// ── Proactive Check (11h diário) ──────────────────────────────────
+async function runProactiveCheck(env) {
+  const feed = JSON.parse(await env.PULSO_KV.get('site_feed') || '[]');
+  const recent = feed.filter(e => Date.now() - e.timestamp < 86400000);
+
+  // Identifica se há pendências críticas que precisam de ação
+  const critical = recent.filter(e =>
+    ['resultado_pendente', 'prazo_vencendo', 'email_ai_processed'].includes(e.type) &&
+    (e.data?.urgencia === 'alta' || e.data?.dias <= 2)
+  );
+
+  if (critical.length > 0) {
+    await sendPush(env, {
+      title: `⚡ ${critical.length} item(ns) precisam de atenção`,
+      body: critical.map(e => eventLabel(e.type, e.data)).slice(0,2).join(' • '),
+      url: '/?tab=dia'
+    });
+  }
 }
 
 // ── Web Push ──────────────────────────────────────────────────────

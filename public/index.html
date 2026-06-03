@@ -259,6 +259,18 @@
     </div>
   </div>
 
+  <!-- Plano de ação IA -->
+  <div>
+    <div class="section-title" style="display:flex;align-items:center;justify-content:space-between">
+      <span>Plano de ação IA</span>
+      <div style="display:flex;gap:6px">
+        <button onclick="loadActionPlan()" style="background:var(--accent);border:none;border-radius:6px;padding:4px 10px;color:white;font-size:12px;cursor:pointer">⚡ Gerar</button>
+        <button id="speak-btn" onclick="speakPlan()" style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:4px 10px;color:var(--text);font-size:12px;cursor:pointer">🔊</button>
+      </div>
+    </div>
+    <div id="action-plan" style="font-size:13px;color:var(--muted);padding:8px 0">Clique em ⚡ Gerar para criar seu plano do dia.</div>
+  </div>
+
   <!-- Feed dos sites -->
   <div>
     <div class="section-title">Rede de sites</div>
@@ -942,6 +954,71 @@ function ansiToHtml(text) {
 
 function escHtml(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ── Plano de Ação IA ──────────────────────────────────────────────
+let lastPlan = '';
+
+async function loadActionPlan() {
+  const el = document.getElementById('action-plan');
+  el.style.color = 'var(--muted)';
+  el.textContent = '⚡ Gerando plano com Gemini...';
+  try {
+    const res = await fetch('/api/action-plan');
+    const data = await res.json();
+    if (data.ok) {
+      lastPlan = data.plan;
+      el.style.color = 'var(--text)';
+      el.innerHTML = data.plan
+        .replace(/🔴/g, '<span style="color:#f85149">🔴</span>')
+        .replace(/🟡/g, '<span style="color:#e3b341">🟡</span>')
+        .replace(/🟢/g, '<span style="color:#7ee787">🟢</span>')
+        .replace(/💡/g, '<span style="color:#79c0ff">💡</span>')
+        .replace(/\n/g, '<br/>');
+    }
+  } catch(e) {
+    el.textContent = 'Erro: ' + e.message;
+  }
+}
+
+// ── Voz (Web Speech API — nativo Android/Chrome, grátis) ──────────
+let isSpeaking = false;
+
+function speakPlan() {
+  if (!lastPlan) { speak('Nenhum plano gerado ainda. Clique em gerar primeiro.'); return; }
+  // Remove emojis e formata para fala
+  const text = lastPlan.replace(/[🔴🟡🟢💡⚡📢⏰🏆✅📧💰👤🔒]/g, '').replace(/\n/g, '. ');
+  speak(text);
+}
+
+function speak(text) {
+  if (!('speechSynthesis' in window)) { alert('Voz não suportada neste browser.'); return; }
+
+  window.speechSynthesis.cancel();
+  if (isSpeaking) { isSpeaking = false; document.getElementById('speak-btn').textContent = '🔊'; return; }
+
+  const utt = new SpeechSynthesisUtterance(text);
+  utt.lang = 'pt-BR';
+  utt.rate = 1.05;
+  utt.pitch = 1.0;
+
+  // Prefere voz feminina em pt-BR se disponível
+  const voices = window.speechSynthesis.getVoices();
+  const ptVoice = voices.find(v => v.lang === 'pt-BR' && v.name.includes('Female'))
+               || voices.find(v => v.lang === 'pt-BR')
+               || voices.find(v => v.lang.startsWith('pt'));
+  if (ptVoice) utt.voice = ptVoice;
+
+  utt.onstart  = () => { isSpeaking = true;  document.getElementById('speak-btn').textContent = '⏹'; };
+  utt.onend    = () => { isSpeaking = false; document.getElementById('speak-btn').textContent = '🔊'; };
+  utt.onerror  = () => { isSpeaking = false; document.getElementById('speak-btn').textContent = '🔊'; };
+
+  window.speechSynthesis.speak(utt);
+}
+
+// Fala o briefing matinal automaticamente quando notificação push abre o app
+function speakBriefing(text) {
+  setTimeout(() => speak(text), 800); // pequeno delay para o app carregar
 }
 
 // ── Câmera → Gemini Vision ────────────────────────────────────────
