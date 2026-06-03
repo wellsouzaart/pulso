@@ -90,6 +90,43 @@
   /* Hidden YT iframe */
   #yt-player{position:fixed;bottom:-200px;left:0;width:1px;height:1px;opacity:0}
 
+  /* ── DIA (dashboard) ── */
+  #dia-view{padding:14px;gap:14px}
+  .dia-greeting{font-size:22px;font-weight:800;line-height:1.3}
+  .dia-greeting span{color:var(--accent)}
+  .dia-date{font-size:13px;color:var(--muted);margin-top:2px}
+  .section-title{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:8px;margin-top:4px}
+  .task-item{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--surface);border-radius:10px;border:1px solid var(--border);margin-bottom:6px}
+  .task-check{width:20px;height:20px;border-radius:6px;border:2px solid var(--border);flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:12px;transition:all .15s}
+  .task-check.done{background:var(--accent);border-color:var(--accent);color:white}
+  .task-text{flex:1;font-size:14px}
+  .task-text.done{text-decoration:line-through;color:var(--muted)}
+  .task-del{color:var(--muted);font-size:18px;cursor:pointer;padding:0 4px;flex-shrink:0}
+  .task-add{display:flex;gap:8px;margin-top:4px}
+  .task-add input{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 12px;color:var(--text);font-size:14px;outline:none}
+  .task-add input:focus{border-color:var(--accent)}
+  .task-add button{background:var(--accent);border:none;border-radius:10px;padding:10px 16px;color:white;font-size:14px;cursor:pointer;font-weight:600}
+  .feed-item{padding:10px 12px;background:var(--surface);border-radius:10px;border-left:3px solid var(--accent);margin-bottom:6px}
+  .feed-item .fi-site{font-size:11px;color:var(--muted);margin-bottom:3px}
+  .feed-item .fi-text{font-size:14px}
+  .feed-item .fi-time{font-size:11px;color:var(--muted);margin-top:3px}
+  .pomodoro{background:var(--surface);border-radius:12px;padding:16px;border:1px solid var(--border);text-align:center}
+  .pomo-timer{font-size:40px;font-weight:800;font-variant-numeric:tabular-nums;color:var(--accent);letter-spacing:-1px}
+  .pomo-label{font-size:12px;color:var(--muted);margin-bottom:12px}
+  .pomo-controls{display:flex;gap:8px;justify-content:center}
+  .pomo-btn{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 16px;color:var(--text);font-size:13px;cursor:pointer}
+  .pomo-btn.primary{background:var(--accent);border-color:var(--accent);color:white}
+  .energy-row{display:flex;gap:8px;justify-content:center;margin-top:8px}
+  .energy-btn{width:36px;height:36px;border-radius:50%;border:2px solid var(--border);background:none;font-size:18px;cursor:pointer;transition:all .15s}
+  .energy-btn.sel{border-color:var(--accent);transform:scale(1.15)}
+  .alarm-row{display:flex;align-items:center;justify-content:space-between;padding:12px;background:var(--surface);border-radius:10px;border:1px solid var(--border)}
+  .alarm-row label{font-size:14px}
+  .alarm-row input[type=time]{background:none;border:1px solid var(--border);border-radius:6px;padding:4px 8px;color:var(--text);font-size:14px}
+  .toggle{width:44px;height:24px;background:var(--border);border-radius:12px;cursor:pointer;position:relative;transition:background .2s;border:none;flex-shrink:0}
+  .toggle.on{background:var(--accent)}
+  .toggle::after{content:'';position:absolute;width:18px;height:18px;background:white;border-radius:50%;top:3px;left:3px;transition:left .2s}
+  .toggle.on::after{left:23px}
+
   /* ── SETTINGS ── */
   #settings-view{padding:20px;gap:0}
   .s-section{margin-bottom:24px}
@@ -157,13 +194,75 @@
 
 <!-- Tabs -->
 <div class="tabs">
-  <div class="tab active" id="tab-chat" onclick="showTab('chat')">💬 Assistente</div>
+  <div class="tab active" id="tab-dia" onclick="showTab('dia')">☀️ Dia</div>
+  <div class="tab" id="tab-chat" onclick="showTab('chat')">💬 Chat</div>
   <div class="tab" id="tab-player" onclick="showTab('player')">🎵 Player</div>
-  <div class="tab" id="tab-settings" onclick="showTab('settings')">⚙ Config</div>
+  <div class="tab" id="tab-settings" onclick="showTab('settings')">⚙</div>
+</div>
+
+<!-- Dia View -->
+<div class="view active" id="dia-view">
+  <div class="dia-greeting" id="dia-greeting">Olá, <span>Well</span> 👋</div>
+  <div class="dia-date" id="dia-date"></div>
+
+  <!-- Pomodoro -->
+  <div class="pomodoro">
+    <div class="pomo-label" id="pomo-label">FOCO</div>
+    <div class="pomo-timer" id="pomo-timer">25:00</div>
+    <div class="pomo-controls">
+      <button class="pomo-btn primary" id="pomo-start" onclick="pomodoroToggle()">▶ Iniciar</button>
+      <button class="pomo-btn" onclick="pomodoroReset()">↺ Reset</button>
+      <button class="pomo-btn" onclick="pomodoroSkip()">⏭ Skip</button>
+    </div>
+  </div>
+
+  <!-- Energia -->
+  <div>
+    <div class="section-title">Energia hoje</div>
+    <div class="energy-row" id="energy-row">
+      <button class="energy-btn" onclick="setEnergy(1)" title="Esgotado">😴</button>
+      <button class="energy-btn" onclick="setEnergy(2)" title="Cansado">😕</button>
+      <button class="energy-btn" onclick="setEnergy(3)" title="Ok">😐</button>
+      <button class="energy-btn" onclick="setEnergy(4)" title="Bem">😊</button>
+      <button class="energy-btn" onclick="setEnergy(5)" title="Ótimo">🔥</button>
+    </div>
+  </div>
+
+  <!-- Tarefas de hoje -->
+  <div>
+    <div class="section-title">Tarefas de hoje</div>
+    <div id="task-list"></div>
+    <div class="task-add">
+      <input type="text" id="task-input" placeholder="+ Nova tarefa..." onkeydown="if(event.key==='Enter')addTask()"/>
+      <button onclick="addTask()">+</button>
+    </div>
+  </div>
+
+  <!-- Feed dos sites -->
+  <div>
+    <div class="section-title">Rede de sites</div>
+    <div id="site-feed"><div style="color:var(--muted);font-size:13px">Carregando...</div></div>
+  </div>
+
+  <!-- Alarme -->
+  <div>
+    <div class="section-title">Alarme matinal</div>
+    <div class="alarm-row">
+      <label>Horário do briefing</label>
+      <input type="time" id="alarm-time" value="07:30" onchange="saveAlarm()"/>
+    </div>
+    <div class="alarm-row" style="margin-top:6px">
+      <label>Notificações push</label>
+      <button class="toggle" id="push-toggle" onclick="togglePush()"></button>
+    </div>
+    <div style="font-size:12px;color:var(--muted);margin-top:8px" id="push-status">
+      Ative para receber o briefing matinal no celular.
+    </div>
+  </div>
 </div>
 
 <!-- Chat View -->
-<div class="view active" id="chat-view">
+<div class="view" id="chat-view">
   <div id="chat-msgs">
     <div class="msg sys" id="today-label"></div>
     <div class="msg ai">Olá! Sou o Pulso 👋<br/><br/>
@@ -681,15 +780,260 @@ document.getElementById('user-input').addEventListener('keydown', function(e) {
   if (e.key==='Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
 });
 
+// ── Service Worker ────────────────────────────────────────────────
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js').catch(() => {});
+}
+
+// ── Dia Tab ───────────────────────────────────────────────────────
+const VAPID_PUBLIC = 'BH6q5lb8vcCBGxvnDIJIgYd2eHPLd3LxW3RKd1fjmkqbG2p3a6eNDOxkJvLTUcy1YBKs2kFgfpKX7uSu61B24Zw';
+
+function initDia() {
+  const now = new Date();
+  const h = now.getHours();
+  const greeting = h < 12 ? 'Bom dia' : h < 18 ? 'Boa tarde' : 'Boa noite';
+  document.getElementById('dia-greeting').innerHTML = `${greeting}, <span>Well</span> 👋`;
+  document.getElementById('dia-date').textContent = now.toLocaleDateString('pt-BR', {weekday:'long', day:'numeric', month:'long'});
+
+  loadTasks();
+  loadFeed();
+  renderEnergy();
+
+  // Push toggle state
+  const pushOn = S.get('push_enabled') === '1';
+  const t = document.getElementById('push-toggle');
+  if (pushOn) t.classList.add('on');
+}
+
+// ── Tasks ─────────────────────────────────────────────────────────
+let tasks = [];
+
+function loadTasks() {
+  tasks = S.get('tasks') || [];
+  // Reset done tasks at midnight
+  const lastReset = S.get('tasks_reset_date');
+  const today = new Date().toDateString();
+  if (lastReset !== today) {
+    tasks = tasks.filter(t => !t.done);
+    S.set('tasks_reset_date', today);
+    saveTasks();
+  }
+  renderTasks();
+}
+
+function renderTasks() {
+  const list = document.getElementById('task-list');
+  if (!tasks.length) {
+    list.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:8px 0">Nenhuma tarefa — adicione abaixo</div>';
+    return;
+  }
+  list.innerHTML = tasks.map((t, i) => `
+    <div class="task-item">
+      <div class="task-check ${t.done ? 'done' : ''}" onclick="toggleTask(${i})">${t.done ? '✓' : ''}</div>
+      <div class="task-text ${t.done ? 'done' : ''}">${t.text}</div>
+      <div class="task-del" onclick="deleteTask(${i})">×</div>
+    </div>
+  `).join('');
+}
+
+function addTask() {
+  const input = document.getElementById('task-input');
+  const text = input.value.trim();
+  if (!text) return;
+  tasks.push({ text, done: false, created: Date.now() });
+  input.value = '';
+  saveTasks();
+  renderTasks();
+}
+
+function toggleTask(i) {
+  tasks[i].done = !tasks[i].done;
+  saveTasks();
+  renderTasks();
+}
+
+function deleteTask(i) {
+  tasks.splice(i, 1);
+  saveTasks();
+  renderTasks();
+}
+
+function saveTasks() {
+  S.set('tasks', tasks);
+  // Sync para o Worker (melhor esforço)
+  fetch('/api/tasks', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ tasks })
+  }).catch(() => {});
+}
+
+// ── Energia ────────────────────────────────────────────────────────
+function setEnergy(val) {
+  S.set('energy_today', { val, date: new Date().toDateString() });
+  renderEnergy();
+}
+
+function renderEnergy() {
+  const saved = S.get('energy_today');
+  const today = new Date().toDateString();
+  const val = (saved?.date === today) ? saved.val : 0;
+  document.querySelectorAll('.energy-btn').forEach((btn, i) => {
+    btn.classList.toggle('sel', i + 1 === val);
+  });
+}
+
+// ── Pomodoro ────────────────────────────────────────────────────────
+let pomoInterval = null;
+let pomoSeconds = 25 * 60;
+let pomoIsBreak = false;
+let pomoRunning = false;
+
+function pomodoroToggle() {
+  if (pomoRunning) {
+    clearInterval(pomoInterval);
+    pomoRunning = false;
+    document.getElementById('pomo-start').textContent = '▶ Continuar';
+  } else {
+    pomoRunning = true;
+    document.getElementById('pomo-start').textContent = '⏸ Pausar';
+    pomoInterval = setInterval(() => {
+      pomoSeconds--;
+      if (pomoSeconds <= 0) pomodoroFinish();
+      updatePomoDisplay();
+    }, 1000);
+  }
+}
+
+function pomodoroReset() {
+  clearInterval(pomoInterval);
+  pomoRunning = false;
+  pomoIsBreak = false;
+  pomoSeconds = 25 * 60;
+  document.getElementById('pomo-start').textContent = '▶ Iniciar';
+  document.getElementById('pomo-label').textContent = 'FOCO';
+  updatePomoDisplay();
+}
+
+function pomodoroSkip() {
+  clearInterval(pomoInterval);
+  pomoRunning = false;
+  pomoIsBreak = !pomoIsBreak;
+  pomoSeconds = pomoIsBreak ? 5 * 60 : 25 * 60;
+  document.getElementById('pomo-label').textContent = pomoIsBreak ? 'PAUSA' : 'FOCO';
+  document.getElementById('pomo-start').textContent = '▶ Iniciar';
+  updatePomoDisplay();
+}
+
+function pomodoroFinish() {
+  clearInterval(pomoInterval);
+  pomoRunning = false;
+  if (Notification.permission === 'granted') {
+    new Notification(pomoIsBreak ? '☕ Pausa acabou!' : '✅ Pomodoro completo!', {
+      body: pomoIsBreak ? 'Hora de focar.' : 'Descanse 5 minutos.',
+      icon: '/icons/icon-192.svg'
+    });
+  }
+  pomodoroSkip();
+}
+
+function updatePomoDisplay() {
+  const m = Math.floor(pomoSeconds / 60).toString().padStart(2, '0');
+  const s = (pomoSeconds % 60).toString().padStart(2, '0');
+  document.getElementById('pomo-timer').textContent = `${m}:${s}`;
+}
+
+// ── Site Feed ──────────────────────────────────────────────────────
+async function loadFeed() {
+  const el = document.getElementById('site-feed');
+  try {
+    const res = await fetch('/api/dashboard');
+    const data = await res.json();
+    if (!data.feed?.length) {
+      el.innerHTML = '<div style="color:var(--muted);font-size:13px">Nenhuma atualização dos sites ainda.</div>';
+      return;
+    }
+    el.innerHTML = data.feed.slice(0, 8).map(e => `
+      <div class="feed-item">
+        <div class="fi-site">${e.site}</div>
+        <div class="fi-text">${e.data?.title || e.type}</div>
+        <div class="fi-time">${timeAgo(e.timestamp)}</div>
+      </div>
+    `).join('');
+  } catch {
+    el.innerHTML = '<div style="color:var(--muted);font-size:13px">Sites ainda não configurados.</div>';
+  }
+}
+
+function timeAgo(ts) {
+  const diff = Date.now() - ts;
+  if (diff < 3600000) return Math.floor(diff / 60000) + ' min atrás';
+  if (diff < 86400000) return Math.floor(diff / 3600000) + 'h atrás';
+  return Math.floor(diff / 86400000) + 'd atrás';
+}
+
+// ── Push Notifications ─────────────────────────────────────────────
+async function togglePush() {
+  const t = document.getElementById('push-toggle');
+  const enabled = S.get('push_enabled') === '1';
+  if (enabled) {
+    t.classList.remove('on');
+    S.set('push_enabled', '0');
+    document.getElementById('push-status').textContent = 'Notificações desativadas.';
+  } else {
+    await enablePush();
+  }
+}
+
+async function enablePush() {
+  const t = document.getElementById('push-toggle');
+  const status = document.getElementById('push-status');
+  try {
+    const perm = await Notification.requestPermission();
+    if (perm !== 'granted') { status.textContent = '⚠️ Permissão negada.'; return; }
+
+    const reg = await navigator.serviceWorker.ready;
+    const sub = await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC)
+    });
+
+    await fetch('/api/subscribe', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ subscription: sub.toJSON() })
+    });
+
+    S.set('push_enabled', '1');
+    t.classList.add('on');
+    status.textContent = '✅ Vai receber o briefing matinal às ' + (S.get('alarm_time') || '07:30') + '.';
+  } catch(e) {
+    status.textContent = 'Erro: ' + e.message;
+  }
+}
+
+function saveAlarm() {
+  S.set('alarm_time', document.getElementById('alarm-time').value);
+}
+
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const rawData = atob(base64);
+  return Uint8Array.from([...rawData].map(c => c.charCodeAt(0)));
+}
+
 handleOAuthRedirect();
 
 // Entry point
 if (S.get('pulso_auth') === '1') {
   document.getElementById('login').style.display = 'none';
-  // Pre-fill defaults so setup screen is never needed
   if (!S.get('gemini_key')) S.set('gemini_key', DEFAULT_GEMINI_KEY);
   if (!S.get('yt_api_key')) S.set('yt_api_key', DEFAULT_YT_KEY);
   init();
+  initDia();
+  // Open on ?tab=dia from push notification
+  if (location.search.includes('tab=dia')) showTab('dia');
 }
 </script>
 </body>

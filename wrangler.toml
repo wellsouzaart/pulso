@@ -1,6 +1,16 @@
 name = "pulso"
+main = "src/index.js"
 compatibility_date = "2024-09-23"
 compatibility_flags = ["nodejs_compat"]
 
 [assets]
 directory = "./public"
+binding = "ASSETS"
+
+# Cron: seg-sex 07:30 BRT (10:30 UTC)
+[triggers]
+crons = ["30 10 * * 1-5"]
+
+[[kv_namespaces]]
+binding = "PULSO_KV"
+id = "f6b56dbc1b56414b9dcfa6737d7a6764"
