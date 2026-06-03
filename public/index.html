@@ -964,21 +964,71 @@ async function loadActionPlan() {
   el.style.color = 'var(--muted)';
   el.textContent = '⚡ Gerando plano com Gemini...';
   try {
-    const res = await fetch('/api/action-plan');
-    const data = await res.json();
-    if (data.ok) {
-      lastPlan = data.plan;
-      el.style.color = 'var(--text)';
-      el.innerHTML = data.plan
-        .replace(/🔴/g, '<span style="color:#f85149">🔴</span>')
-        .replace(/🟡/g, '<span style="color:#e3b341">🟡</span>')
-        .replace(/🟢/g, '<span style="color:#7ee787">🟢</span>')
-        .replace(/💡/g, '<span style="color:#79c0ff">💡</span>')
-        .replace(/\n/g, '<br/>');
+    // Busca dados brutos do servidor
+    const [dashRes, ctxRes] = await Promise.all([
+      fetch('/api/dashboard'),
+      fetch('/api/morning-context')
+    ]);
+    const dash = await dashRes.json();
+    const ctx  = await ctxRes.json();
+
+    const feed  = dash.feed  || [];
+    const tasks = (dash.tasks || []).filter(t => !t.done);
+
+    const byType = {};
+    for (const e of feed.slice(0, 20)) {
+      if (!byType[e.type]) byType[e.type] = [];
+      byType[e.type].push(e.data);
     }
+
+    const prompt = `${SYSTEM}
+
+## Dados dos sites agora
+${JSON.stringify(byType, null, 1)}
+
+## Tarefas pendentes (${tasks.length})
+${tasks.map(t => '- ' + t.text).join('\n') || 'Nenhuma'}
+
+## Instrução
+Gere um PLANO DE AÇÃO conciso. Formato:
+🔴 URGENTE (fazer hoje)
+🟡 IMPORTANTE (esta semana)
+🟢 MONITORAR
+💡 OPORTUNIDADE
+
+Máximo 10 itens. 1 linha cada.`;
+
+    const key = S.get('gemini_key');
+    const body = {
+      system_instruction: { parts: [{ text: '' }] },
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      generationConfig: { maxOutputTokens: 1024, temperature: 0.7 }
+    };
+    const res = await fetch(`${GEMINI_API}?key=${key}`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
+    });
+    const data = await res.json();
+    const plan = data.candidates?.[0]?.content?.parts?.[0]?.text || 'Sem dados suficientes para gerar plano.';
+
+    lastPlan = plan;
+    el.style.color = 'var(--text)';
+    el.innerHTML = plan
+      .replace(/🔴/g, '<span style="color:#f85149">🔴</span>')
+      .replace(/🟡/g, '<span style="color:#e3b341">🟡</span>')
+      .replace(/🟢/g, '<span style="color:#7ee787">🟢</span>')
+      .replace(/💡/g, '<span style="color:#79c0ff">💡</span>')
+      .replace(/\n/g, '<br/>');
   } catch(e) {
     el.textContent = 'Erro: ' + e.message;
   }
+}
+
+// Auto-gera briefing quando app abre via push (?briefing=1)
+async function autoMorningBriefing() {
+  const el = document.getElementById('action-plan');
+  el.textContent = '⚡ Gerando briefing matinal...';
+  await loadActionPlan();
+  if (lastPlan) speakBriefing(lastPlan.split('\n').slice(0, 4).join('. '));
 }
 
 // ── Voz (Web Speech API — nativo Android/Chrome, grátis) ──────────
@@ -1363,6 +1413,8 @@ if (S.get('pulso_auth') === '1') {
   initTerminal();
   if (location.search.includes('tab=dia')) showTab('dia');
   if (location.search.includes('tab=terminal')) showTab('terminal');
+  if (location.search.includes('briefing=1')) { showTab('dia'); autoMorningBriefing(); }
+  if (location.search.includes('report=1'))   { showTab('dia'); loadActionPlan(); }
 }
 </script>
 </body>

@@ -107,6 +107,9 @@ export default {
     if (path === '/api/action-plan' && request.method === 'GET')
       return handleActionPlan(request, env);
 
+    if (path === '/api/morning-context' && request.method === 'GET')
+      return handleMorningContext(request, env);
+
     if (path === '/api/email-ai' && request.method === 'POST')
       return handleEmailAI(request, env);
 
@@ -428,6 +431,12 @@ const HELP_TEXT = `\x1b[32m╔════════════════�
 
 \x1b[90mDica: setas ↑↓ para histórico, Tab para completar\x1b[0m`;
 
+// ── Morning Context ───────────────────────────────────────────────
+async function handleMorningContext(request, env) {
+  const raw = await env.PULSO_KV.get('morning_context');
+  return json({ ok: true, context: JSON.parse(raw || 'null') });
+}
+
 // ── Action Plan ───────────────────────────────────────────────────
 // GET /api/action-plan — lê feed + tarefas e gera plano com Gemini
 async function handleActionPlan(request, env) {
@@ -615,56 +624,48 @@ async function gemini(prompt, env, maxTokens = 2048) {
 }
 
 // ── Morning Briefing ──────────────────────────────────────────────
+// Cron envia push com dados brutos — o frontend gera o briefing com Gemini
 async function sendMorningBriefing(env) {
   const [feedRaw, tasksRaw] = await Promise.all([
     env.PULSO_KV.get('site_feed'),
     env.PULSO_KV.get('tasks')
   ]);
-
-  const feed = JSON.parse(feedRaw || '[]');
   const tasks = JSON.parse(tasksRaw || '[]');
-  const pendingTasks = tasks.filter(t => !t.done);
-  const todayEvents = feed.filter(e => {
-    const age = Date.now() - e.timestamp;
-    return age < 86400000; // últimas 24h
-  });
+  const feed  = JSON.parse(feedRaw  || '[]');
+  const pending = tasks.filter(t => !t.done).length;
+  const urgent  = feed.filter(e =>
+    Date.now() - e.timestamp < 86400000 &&
+    ['prazo_vencendo','resultado_pendente','email_received','new_order'].includes(e.type)
+  ).length;
 
-  // Gera briefing com Gemini
-  let briefingText = '';
-  try {
-    const prompt = BASE_SYSTEM() + `\n\nÉ manhã de hoje no Brasil. Gere um briefing matinal em 2 frases curtas.
+  // Salva contexto para o frontend gerar o briefing ao abrir
+  await env.PULSO_KV.put('morning_context', JSON.stringify({
+    pending, urgent, feed: feed.slice(0, 10), tasks: tasks.filter(t=>!t.done).slice(0,5),
+    generated_at: Date.now()
+  }));
 
-Tarefas pendentes (${pendingTasks.length}):
-${pendingTasks.slice(0, 5).map(t => '- ' + t.text).join('\n') || 'Nenhuma'}
-
-Eventos recentes dos sites:
-${todayEvents.slice(0, 5).map(e => `- [${e.site}] ${eventLabel(e.type, e.data)}`).join('\n') || 'Nada novo'}
-
-Responda apenas com o briefing — foco do dia e o que está pendente. Direto e motivador.`;
-
-    const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${env.GEMINI_KEY}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
-      }
-    );
-    const data = await res.json();
-    briefingText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-  } catch (e) {
-    briefingText = `${pendingTasks.length} tarefas pendentes. Bom dia!`;
-  }
+  const body = [
+    pending  > 0 ? `${pending} tarefas pendentes` : 'Sem tarefas pendentes',
+    urgent   > 0 ? `${urgent} urgência(s) nos sites` : ''
+  ].filter(Boolean).join(' · ') || 'Tudo tranquilo hoje';
 
   await sendPush(env, {
-    title: '☀️ Bom dia, Well',
-    body: briefingText || `${pendingTasks.length} tarefas hoje`,
-    url: '/?tab=dia'
+    title: '☀️ Bom dia, Well — abra para o briefing',
+    body,
+    url: '/?tab=dia&briefing=1'
   });
 }
 
-// ── Weekly Report (sexta 18h) ─────────────────────────────────────
+// ── Weekly Report — push simples, frontend gera o relatório ──────
 async function sendWeeklyReport(env) {
+  const feed = JSON.parse(await env.PULSO_KV.get('site_feed') || '[]');
+  const weekEvents = feed.filter(e => Date.now() - e.timestamp < 7 * 86400000);
+  await env.PULSO_KV.put('weekly_context', JSON.stringify({ events: weekEvents.slice(0,30), generated_at: Date.now() }));
+  await sendPush(env, { title: '📊 Relatório semanal pronto', body: `${weekEvents.length} eventos esta semana`, url: '/?tab=dia&report=1' });
+}
+
+// ── DEAD CODE — weekly report original com gemini (não usado) ────
+async function _sendWeeklyReportOLD(env) {
   const feed = JSON.parse(await env.PULSO_KV.get('site_feed') || '[]');
   const tasks = JSON.parse(await env.PULSO_KV.get('tasks') || '[]');
   const weekEvents = feed.filter(e => Date.now() - e.timestamp < 7 * 86400000);
