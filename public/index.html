@@ -5,292 +5,604 @@
   <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover"/>
   <meta name="apple-mobile-web-app-capable" content="yes"/>
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
-  <meta name="theme-color" content="#0a0a0a"/>
+  <meta name="theme-color" content="#0c0c0a"/>
   <title>Pulso</title>
   <link rel="manifest" href="/manifest.json"/>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
   <style>
-  *{box-sizing:border-box;margin:0;padding:0}
-  :root{
-    --bg:#0a0a0a;--surface:#141414;--border:#222;
-    --accent:#7c6af7;--accent-dim:#3d3580;
-    --green:#1DB954;--text:#f0f0f0;--muted:#666;
-    --safe-top:env(safe-area-inset-top,0px);
-    --safe-bottom:env(safe-area-inset-bottom,0px);
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:       #0c0c0a;
+    --s1:       #131310;
+    --s2:       #1a1a16;
+    --border:   #21211d;
+    --border2:  #2a2a25;
+    --accent:   #c8906a;
+    --accent-d: #2e1e12;
+    --text:     #f0ede6;
+    --text2:    #9a9790;
+    --muted:    #58554f;
+    --sage:     #7a9e6e;
+    --red:      #c8604a;
+    --yellow:   #c8a04a;
+    --st: env(safe-area-inset-top,0px);
+    --sb: env(safe-area-inset-bottom,0px);
+    --r: 12px;
   }
-  body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;height:100dvh;display:flex;flex-direction:column;overflow:hidden}
 
-  /* ── HEADER ── */
-  header{padding:calc(var(--safe-top) + 10px) 14px 10px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;flex-shrink:0}
-  .logo{font-size:20px;font-weight:800;color:var(--accent);letter-spacing:-0.5px;flex-shrink:0}
-  .logo span{color:var(--text)}
-  .pills{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;flex:1}
-  .pills::-webkit-scrollbar{display:none}
-  .pill{font-size:11px;padding:4px 9px;border-radius:20px;border:1px solid var(--border);color:var(--muted);white-space:nowrap;cursor:pointer;transition:all .15s;flex-shrink:0}
-  .pill.on{border-color:#2d6a4f;color:var(--green);background:#0d2318}
-  .pill.active{border-color:var(--accent);color:var(--accent);background:#1a1630}
+  html, body { height: 100%; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, 'SF Pro Text', 'Helvetica Neue', Arial, sans-serif;
+    font-size: 15px;
+    line-height: 1.5;
+    letter-spacing: -0.01em;
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
 
-  /* ── TABS ── */
-  .tabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0}
-  .tab{flex:1;padding:10px;font-size:13px;color:var(--muted);text-align:center;cursor:pointer;border-bottom:2px solid transparent;transition:all .15s}
-  .tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+  /* ── ICONS (SVG inline helpers) ─────────────────────────────────── */
+  .icon { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+  .icon-sm { width: 16px; height: 16px; }
+  .icon-lg { width: 24px; height: 24px; }
 
-  /* ── VIEWS ── */
-  .view{flex:1;overflow-y:auto;display:none;flex-direction:column}
-  .view.active{display:flex}
+  /* ── HEADER ─────────────────────────────────────────────────────── */
+  header {
+    padding: calc(var(--st) + 14px) 18px 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .wordmark {
+    font-size: 17px;
+    font-weight: 600;
+    letter-spacing: -0.03em;
+    color: var(--text);
+  }
+  .wordmark em { color: var(--accent); font-style: normal; }
+  .status-pills { display: flex; gap: 6px; align-items: center; }
+  .spill {
+    display: flex; align-items: center; gap: 5px;
+    font-size: 11px; font-weight: 500; letter-spacing: 0.01em;
+    padding: 4px 9px; border-radius: 20px;
+    border: 1px solid var(--border); color: var(--muted);
+    cursor: pointer; transition: all .15s; white-space: nowrap;
+  }
+  .spill svg { width: 10px; height: 10px; }
+  .spill.on  { border-color: #2a3e24; color: var(--sage); background: #151e12; }
+  .spill:active { opacity: .7; }
 
-  /* ── CHAT ── */
-  #chat-msgs{flex:1;padding:14px;display:flex;flex-direction:column;gap:12px}
-  .msg{max-width:90%;line-height:1.55;font-size:15px;animation:fadeUp .2s ease}
-  @keyframes fadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
-  .msg.user{align-self:flex-end;background:var(--accent-dim);border-radius:18px 18px 4px 18px;padding:10px 14px}
-  .msg.ai{align-self:flex-start;background:var(--surface);border:1px solid var(--border);border-radius:4px 18px 18px 18px;padding:12px 14px}
-  .msg.sys{align-self:center;color:var(--muted);font-size:12px}
-  .typing{display:flex;gap:4px;align-items:center;padding:10px 14px}
-  .typing span{width:6px;height:6px;background:var(--accent);border-radius:50%;animation:tp 1.2s infinite}
-  .typing span:nth-child(2){animation-delay:.2s}
-  .typing span:nth-child(3){animation-delay:.4s}
-  @keyframes tp{0%,60%,100%{opacity:.3;transform:scale(1)}30%{opacity:1;transform:scale(1.3)}}
-  #chat-input-area{padding:10px 14px calc(var(--safe-bottom) + 10px);border-top:1px solid var(--border);display:flex;gap:8px;align-items:flex-end;flex-shrink:0}
-  #user-input{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:10px 16px;color:var(--text);font-size:15px;resize:none;max-height:120px;outline:none;line-height:1.4}
-  #user-input:focus{border-color:var(--accent)}
-  #user-input::placeholder{color:var(--muted)}
-  #send-btn{width:40px;height:40px;background:var(--accent);border:none;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-  #send-btn:disabled{opacity:.4}
-  #send-btn svg{fill:white;width:18px;height:18px}
-  #camera-btn{width:36px;height:36px;background:var(--surface);border:1px solid var(--border);border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:18px}
-  .img-preview{max-width:200px;border-radius:10px;margin-top:6px;display:block}
-  .img-analyzing{color:var(--muted);font-size:13px;font-style:italic}
+  /* ── BOTTOM NAV ─────────────────────────────────────────────────── */
+  .bottom-nav {
+    display: flex;
+    border-top: 1px solid var(--border);
+    background: var(--bg);
+    padding-bottom: var(--sb);
+    flex-shrink: 0;
+  }
+  .nav-item {
+    flex: 1; display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 3px; padding: 10px 4px;
+    background: none; border: none;
+    color: var(--muted); cursor: pointer;
+    font-size: 10px; font-weight: 500;
+    letter-spacing: 0.02em;
+    transition: color .15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .nav-item svg { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+  .nav-item.active { color: var(--accent); }
+  .nav-item span { font-size: 10px; }
 
-  /* ── PLAYER VIEW ── */
-  #player-view{padding:16px;gap:14px}
-  .search-bar{display:flex;gap:8px}
-  .search-bar input{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 14px;color:var(--text);font-size:14px;outline:none}
-  .search-bar input:focus{border-color:var(--accent)}
-  .search-bar button{background:var(--accent);border:none;border-radius:10px;padding:10px 16px;color:white;font-size:14px;cursor:pointer;font-weight:600}
-  .source-tabs{display:flex;gap:8px}
-  .src-tab{padding:6px 14px;border-radius:20px;border:1px solid var(--border);font-size:13px;color:var(--muted);cursor:pointer}
-  .src-tab.active{background:var(--accent);border-color:var(--accent);color:white}
-  .track-list{display:flex;flex-direction:column;gap:2px}
-  .track{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:10px;cursor:pointer;transition:background .15s}
-  .track:hover,.track.playing{background:var(--surface)}
-  .track-thumb{width:44px;height:44px;border-radius:6px;object-fit:cover;flex-shrink:0;background:var(--border)}
-  .track-info{flex:1;min-width:0}
-  .track-title{font-size:14px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .track-sub{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .track-dur{font-size:12px;color:var(--muted);flex-shrink:0}
+  /* ── VIEWS ──────────────────────────────────────────────────────── */
+  .view { flex: 1; overflow-y: auto; display: none; flex-direction: column; overscroll-behavior: contain; }
+  .view.active { display: flex; }
+  .view::-webkit-scrollbar { width: 0; }
 
-  /* Now playing bar */
-  #now-playing{background:var(--surface);border-top:1px solid var(--border);padding:10px 14px calc(var(--safe-bottom) + 10px);display:none;align-items:center;gap:12px;flex-shrink:0}
-  #now-playing.visible{display:flex}
-  .np-thumb{width:40px;height:40px;border-radius:6px;object-fit:cover;flex-shrink:0;background:var(--border)}
-  .np-info{flex:1;min-width:0}
-  .np-title{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .np-src{font-size:11px;color:var(--muted)}
-  .np-controls{display:flex;gap:12px;align-items:center;flex-shrink:0}
-  .np-btn{background:none;border:none;color:var(--text);cursor:pointer;font-size:20px;padding:4px;line-height:1}
-  .np-btn.play{width:36px;height:36px;background:var(--accent);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px}
+  /* ── SECTION LABEL ──────────────────────────────────────────────── */
+  .section-label {
+    font-size: 10px; font-weight: 600; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--muted);
+    padding: 0 18px; margin: 20px 0 8px;
+  }
 
-  /* Hidden YT iframe */
-  #yt-player{position:fixed;bottom:-200px;left:0;width:1px;height:1px;opacity:0}
+  /* ── HOME VIEW ──────────────────────────────────────────────────── */
+  #home-view { gap: 0; }
+  .home-hero {
+    padding: 28px 18px 20px;
+    border-bottom: 1px solid var(--border);
+  }
+  .home-greeting { font-size: 24px; font-weight: 600; letter-spacing: -0.03em; line-height: 1.2; }
+  .home-greeting strong { color: var(--accent); font-weight: 600; }
+  .home-date { font-size: 13px; color: var(--text2); margin-top: 4px; }
 
-  /* ── DIA (dashboard) ── */
-  #dia-view{padding:14px;gap:14px}
-  .dia-greeting{font-size:22px;font-weight:800;line-height:1.3}
-  .dia-greeting span{color:var(--accent)}
-  .dia-date{font-size:13px;color:var(--muted);margin-top:2px}
-  .section-title{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:8px;margin-top:4px}
-  .task-item{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--surface);border-radius:10px;border:1px solid var(--border);margin-bottom:6px}
-  .task-check{width:20px;height:20px;border-radius:6px;border:2px solid var(--border);flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:12px;transition:all .15s}
-  .task-check.done{background:var(--accent);border-color:var(--accent);color:white}
-  .task-text{flex:1;font-size:14px}
-  .task-text.done{text-decoration:line-through;color:var(--muted)}
-  .task-del{color:var(--muted);font-size:18px;cursor:pointer;padding:0 4px;flex-shrink:0}
-  .task-add{display:flex;gap:8px;margin-top:4px}
-  .task-add input{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 12px;color:var(--text);font-size:14px;outline:none}
-  .task-add input:focus{border-color:var(--accent)}
-  .task-add button{background:var(--accent);border:none;border-radius:10px;padding:10px 16px;color:white;font-size:14px;cursor:pointer;font-weight:600}
-  .feed-item{padding:10px 12px;background:var(--surface);border-radius:10px;border-left:3px solid var(--accent);margin-bottom:6px}
-  .feed-item .fi-site{font-size:11px;color:var(--muted);margin-bottom:3px}
-  .feed-item .fi-text{font-size:14px}
-  .feed-item .fi-time{font-size:11px;color:var(--muted);margin-top:3px}
-  .pomodoro{background:var(--surface);border-radius:12px;padding:16px;border:1px solid var(--border);text-align:center}
-  .pomo-timer{font-size:40px;font-weight:800;font-variant-numeric:tabular-nums;color:var(--accent);letter-spacing:-1px}
-  .pomo-label{font-size:12px;color:var(--muted);margin-bottom:12px}
-  .pomo-controls{display:flex;gap:8px;justify-content:center}
-  .pomo-btn{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 16px;color:var(--text);font-size:13px;cursor:pointer}
-  .pomo-btn.primary{background:var(--accent);border-color:var(--accent);color:white}
-  .energy-row{display:flex;gap:8px;justify-content:center;margin-top:8px}
-  .energy-btn{width:36px;height:36px;border-radius:50%;border:2px solid var(--border);background:none;font-size:18px;cursor:pointer;transition:all .15s}
-  .energy-btn.sel{border-color:var(--accent);transform:scale(1.15)}
-  .alarm-row{display:flex;align-items:center;justify-content:space-between;padding:12px;background:var(--surface);border-radius:10px;border:1px solid var(--border)}
-  .alarm-row label{font-size:14px}
-  .alarm-row input[type=time]{background:none;border:1px solid var(--border);border-radius:6px;padding:4px 8px;color:var(--text);font-size:14px}
-  .toggle{width:44px;height:24px;background:var(--border);border-radius:12px;cursor:pointer;position:relative;transition:background .2s;border:none;flex-shrink:0}
-  .toggle.on{background:var(--accent)}
-  .toggle::after{content:'';position:absolute;width:18px;height:18px;background:white;border-radius:50%;top:3px;left:3px;transition:left .2s}
-  .toggle.on::after{left:23px}
+  /* Pomodoro */
+  .pomo-card {
+    margin: 0 18px 2px;
+    background: var(--s1);
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    padding: 18px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .pomo-ring {
+    position: relative; width: 64px; height: 64px; flex-shrink: 0;
+  }
+  .pomo-ring svg { width: 64px; height: 64px; transform: rotate(-90deg); }
+  .pomo-ring circle { fill: none; stroke-width: 3; }
+  .pomo-ring .bg  { stroke: var(--border2); }
+  .pomo-ring .fg  { stroke: var(--accent); stroke-linecap: round; transition: stroke-dashoffset 1s linear; }
+  .pomo-time-inner {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 600; letter-spacing: -0.03em;
+    font-variant-numeric: tabular-nums;
+  }
+  .pomo-info { flex: 1; }
+  .pomo-mode { font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
+  .pomo-actions { display: flex; gap: 6px; margin-top: 8px; }
+  .btn-sm {
+    padding: 6px 12px; border-radius: 8px; font-size: 13px; font-weight: 500;
+    border: 1px solid var(--border); background: var(--s2); color: var(--text);
+    cursor: pointer; transition: all .15s; display: flex; align-items: center; gap: 5px;
+  }
+  .btn-sm.primary { background: var(--accent); border-color: var(--accent); color: white; }
+  .btn-sm:active { opacity: .7; }
+  .btn-sm svg { width: 14px; height: 14px; }
 
-  /* ── TERMINAL ── */
-  #terminal-view{padding:0;background:#0d1117;flex-direction:column}
-  #terminal-output{flex:1;overflow-y:auto;padding:12px 14px;font-family:'JetBrains Mono','Fira Code','Cascadia Code',Menlo,monospace;font-size:13px;line-height:1.6;color:#e6edf3;word-break:break-word}
-  .t-line{white-space:pre-wrap;animation:fadeUp .1s ease}
-  .t-prompt{color:#7ee787}
-  .t-cmd{color:#e6edf3}
-  .t-output{color:#cdd9e5}
-  .t-error{color:#f85149}
-  .t-info{color:#79c0ff}
-  #terminal-input-row{display:flex;align-items:center;padding:8px 14px calc(var(--safe-bottom) + 8px);border-top:1px solid #21262d;flex-shrink:0;gap:8px;background:#0d1117}
-  #terminal-prompt-label{color:#7ee787;font-family:'JetBrains Mono',monospace;font-size:13px;white-space:nowrap;flex-shrink:0}
-  #terminal-input{flex:1;background:none;border:none;outline:none;color:#e6edf3;font-family:'JetBrains Mono',monospace;font-size:13px;caret-color:#7ee787}
-  #terminal-input::placeholder{color:#484f58}
-  .t-separator{color:#30363d;margin:4px 0}
+  /* Energy */
+  .energy-row { display: flex; gap: 8px; padding: 0 18px; }
+  .energy-dot {
+    flex: 1; aspect-ratio: 1; border-radius: 50%;
+    border: 1.5px solid var(--border); background: none; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; transition: all .15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .energy-dot.sel { border-color: var(--accent); background: var(--accent-d); transform: scale(1.08); }
 
-  /* ── SETTINGS ── */
-  #settings-view{padding:20px;gap:0}
-  .s-section{margin-bottom:24px}
-  .s-title{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:10px}
-  .s-row{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border)}
-  .s-row label{font-size:14px}
-  .s-row span{font-size:12px;color:var(--muted)}
-  .s-input{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 12px;color:var(--text);font-size:14px;margin-top:8px;outline:none}
-  .s-input:focus{border-color:var(--accent)}
-  .s-btn{width:100%;background:var(--accent);color:white;border:none;border-radius:10px;padding:12px;font-size:15px;font-weight:700;cursor:pointer;margin-top:8px}
-  .s-btn.sec{background:var(--surface);border:1px solid var(--border);color:var(--text)}
+  /* Tasks */
+  .task-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 11px 18px;
+    border-bottom: 1px solid var(--border);
+    animation: fadeUp .15s ease;
+  }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; } }
+  .task-check {
+    width: 20px; height: 20px; border-radius: 6px;
+    border: 1.5px solid var(--border2); flex-shrink: 0; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all .15s;
+  }
+  .task-check.done { background: var(--sage); border-color: var(--sage); }
+  .task-check.done svg { stroke: white; }
+  .task-text { flex: 1; font-size: 14px; }
+  .task-text.done { text-decoration: line-through; color: var(--muted); }
+  .task-del { color: var(--muted); cursor: pointer; padding: 4px; display: flex; }
+  .task-del:hover { color: var(--red); }
+  .task-add-row { display: flex; align-items: center; gap: 10px; padding: 10px 18px; }
+  .task-add-row input {
+    flex: 1; background: none; border: none; outline: none;
+    color: var(--text); font-size: 14px; font-family: inherit;
+  }
+  .task-add-row input::placeholder { color: var(--muted); }
+  .task-add-row button {
+    width: 28px; height: 28px; border-radius: 8px;
+    background: var(--accent); border: none; color: white;
+    font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
 
-  /* ── LOGIN / SETUP ── */
-  #login{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 24px;gap:18px;z-index:100}
-  #login h1{font-size:40px;font-weight:800;color:var(--accent)}
-  #login p{color:var(--muted);text-align:center;font-size:14px;line-height:1.6}
-  #login input{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 16px;color:var(--text);font-size:16px;outline:none}
-  #login input:focus{border-color:var(--accent)}
-  #login button{width:100%;background:var(--accent);color:white;border:none;border-radius:12px;padding:14px;font-size:16px;font-weight:700;cursor:pointer}
-  #login .err{font-size:13px;color:#f87171;text-align:center;display:none}
-  #setup{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 24px;gap:18px;z-index:99;display:none}
-  #setup h2{font-size:22px;font-weight:700}
-  #setup p{color:var(--muted);text-align:center;font-size:14px;line-height:1.6}
-  #setup input{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 16px;color:var(--text);font-size:16px;outline:none}
-  #setup input:focus{border-color:var(--accent)}
-  #setup button{width:100%;background:var(--accent);color:white;border:none;border-radius:12px;padding:14px;font-size:16px;font-weight:700;cursor:pointer}
-  #setup .hint{font-size:12px;color:var(--muted);text-align:center}
-  #setup a{color:var(--accent)}
+  /* Plan */
+  .plan-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 18px; margin-top: 20px; margin-bottom: 8px;
+  }
+  .plan-label { font-size: 10px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+  .plan-actions { display: flex; gap: 6px; }
+  .icon-btn {
+    width: 28px; height: 28px; border-radius: 8px;
+    border: 1px solid var(--border); background: var(--s1);
+    color: var(--text2); cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all .15s;
+  }
+  .icon-btn:active { opacity: .7; }
+  .icon-btn.primary { background: var(--accent); border-color: var(--accent); color: white; }
+  .icon-btn svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 1.5; stroke-linecap: round; }
+  #action-plan {
+    margin: 0 18px; padding: 14px; font-size: 13px; line-height: 1.7;
+    background: var(--s1); border: 1px solid var(--border); border-radius: var(--r);
+    color: var(--text2);
+  }
+  #action-plan.loaded { color: var(--text); }
 
-  pre{background:#0d0d0d;border:1px solid var(--border);border-radius:8px;padding:10px;overflow-x:auto;font-size:12px;margin-top:6px;white-space:pre-wrap;word-break:break-word}
-  a{color:var(--accent)}
+  /* Feed */
+  .feed-item {
+    padding: 12px 18px;
+    border-bottom: 1px solid var(--border);
+    display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center;
+  }
+  .feed-dot {
+    width: 6px; height: 6px; border-radius: 50%; background: var(--border2); flex-shrink: 0;
+  }
+  .feed-dot.urgent { background: var(--accent); }
+  .feed-body { min-width: 0; }
+  .feed-site { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 1px; }
+  .feed-text { font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .feed-time { font-size: 11px; color: var(--muted); }
+
+  /* Alarm */
+  .alarm-card {
+    margin: 0 18px 20px;
+    background: var(--s1); border: 1px solid var(--border); border-radius: var(--r);
+    overflow: hidden;
+  }
+  .alarm-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 13px 16px; border-bottom: 1px solid var(--border);
+  }
+  .alarm-row:last-child { border-bottom: none; }
+  .alarm-row label { font-size: 14px; }
+  .alarm-row input[type=time] {
+    background: none; border: none; color: var(--text2);
+    font-size: 14px; font-family: inherit; cursor: pointer; outline: none;
+  }
+  .toggle {
+    width: 42px; height: 24px; border-radius: 12px; background: var(--border2);
+    border: none; cursor: pointer; position: relative; transition: background .2s; flex-shrink: 0;
+  }
+  .toggle.on { background: var(--sage); }
+  .toggle::after {
+    content: ''; position: absolute;
+    width: 18px; height: 18px; border-radius: 50%; background: white;
+    top: 3px; left: 3px; transition: left .2s; box-shadow: 0 1px 3px rgba(0,0,0,.3);
+  }
+  .toggle.on::after { left: 21px; }
+  #push-status { padding: 0 16px 12px; font-size: 12px; color: var(--muted); }
+
+  /* ── CHAT VIEW ──────────────────────────────────────────────────── */
+  #chat-view { background: var(--bg); }
+  #chat-msgs { flex: 1; padding: 16px 16px 8px; display: flex; flex-direction: column; gap: 10px; }
+  .msg { max-width: 88%; font-size: 15px; line-height: 1.55; animation: fadeUp .2s ease; }
+  .msg.user {
+    align-self: flex-end;
+    background: var(--accent-d);
+    border: 1px solid rgba(200,144,106,.2);
+    border-radius: 18px 18px 4px 18px;
+    padding: 10px 14px; color: var(--text);
+  }
+  .msg.ai {
+    align-self: flex-start;
+    background: var(--s1); border: 1px solid var(--border);
+    border-radius: 4px 18px 18px 18px;
+    padding: 12px 14px;
+  }
+  .msg.sys { align-self: center; color: var(--muted); font-size: 12px; }
+  .typing { display: flex; gap: 5px; align-items: center; padding: 12px 14px; }
+  .typing span {
+    width: 5px; height: 5px; border-radius: 50%; background: var(--muted);
+    animation: tp 1.2s ease-in-out infinite;
+  }
+  .typing span:nth-child(2) { animation-delay: .2s; }
+  .typing span:nth-child(3) { animation-delay: .4s; }
+  @keyframes tp { 0%,60%,100% { opacity:.3; transform:scale(1); } 30% { opacity:1; transform:scale(1.2); } }
+  .img-preview { max-width: 200px; border-radius: 10px; display: block; margin-top: 4px; }
+
+  #chat-input-area {
+    display: flex; align-items: flex-end; gap: 8px;
+    padding: 10px 14px calc(var(--sb) + 10px);
+    border-top: 1px solid var(--border); background: var(--bg); flex-shrink: 0;
+  }
+  .chat-tool-btn {
+    width: 36px; height: 36px; border-radius: 10px;
+    border: 1px solid var(--border); background: var(--s1);
+    color: var(--text2); cursor: pointer; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    transition: all .15s;
+  }
+  .chat-tool-btn:active { opacity: .7; }
+  .chat-tool-btn svg { width: 17px; height: 17px; stroke: currentColor; fill: none; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+  #user-input {
+    flex: 1; background: var(--s1); border: 1px solid var(--border);
+    border-radius: 18px; padding: 9px 14px;
+    color: var(--text); font-size: 15px; font-family: inherit;
+    resize: none; max-height: 120px; outline: none; line-height: 1.4;
+    transition: border-color .15s;
+  }
+  #user-input:focus { border-color: var(--border2); }
+  #user-input::placeholder { color: var(--muted); }
+  #send-btn {
+    width: 36px; height: 36px; background: var(--accent); border: none;
+    border-radius: 50%; cursor: pointer; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    transition: opacity .15s;
+  }
+  #send-btn:disabled { opacity: .35; }
+  #send-btn svg { width: 16px; height: 16px; stroke: white; fill: none; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+
+  /* ── TERMINAL VIEW ──────────────────────────────────────────────── */
+  #terminal-view { background: #0a0e13; }
+  #terminal-output {
+    flex: 1; overflow-y: auto; padding: 14px 16px;
+    font-family: 'JetBrains Mono', 'Fira Code', Menlo, monospace;
+    font-size: 12.5px; line-height: 1.65; color: #cdd9e5;
+    word-break: break-word;
+  }
+  .t-line { white-space: pre-wrap; animation: fadeUp .1s ease; }
+  .t-prompt { color: #7ca47a; }
+  .t-cmd { color: #e6edf3; }
+  #terminal-input-row {
+    display: flex; align-items: center; gap: 8px;
+    padding: 10px 16px calc(var(--sb) + 10px);
+    border-top: 1px solid #1c2430; background: #0a0e13; flex-shrink: 0;
+  }
+  #terminal-prompt-label {
+    color: #7ca47a; font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px; white-space: nowrap; flex-shrink: 0;
+  }
+  #terminal-input {
+    flex: 1; background: none; border: none; outline: none;
+    color: #e6edf3; font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px; caret-color: #c8906a;
+  }
+
+  /* ── PLAYER VIEW ────────────────────────────────────────────────── */
+  #player-view { gap: 0; }
+  .player-search {
+    display: flex; gap: 8px; align-items: center;
+    padding: 14px 18px; border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .player-search input {
+    flex: 1; background: var(--s1); border: 1px solid var(--border);
+    border-radius: 10px; padding: 9px 14px;
+    color: var(--text); font-size: 14px; font-family: inherit; outline: none;
+  }
+  .player-search input:focus { border-color: var(--border2); }
+  .src-tabs { display: flex; gap: 6px; padding: 12px 18px 0; flex-shrink: 0; }
+  .src-tab {
+    padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: 500;
+    border: 1px solid var(--border); color: var(--muted); cursor: pointer;
+    transition: all .15s;
+  }
+  .src-tab.active { background: var(--accent); border-color: var(--accent); color: white; }
+  .track-list { flex: 1; overflow-y: auto; }
+  .track {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 18px; cursor: pointer;
+    border-bottom: 1px solid var(--border);
+    transition: background .1s;
+  }
+  .track:active, .track.playing { background: var(--s1); }
+  .track-thumb {
+    width: 44px; height: 44px; border-radius: 8px;
+    object-fit: cover; flex-shrink: 0; background: var(--border2);
+  }
+  .track-info { flex: 1; min-width: 0; }
+  .track-title { font-size: 14px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .track-sub { font-size: 12px; color: var(--text2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .track-dur { font-size: 12px; color: var(--muted); flex-shrink: 0; }
+  #now-playing {
+    display: none; align-items: center; gap: 12px;
+    padding: 10px 18px calc(var(--sb) + 10px);
+    border-top: 1px solid var(--border); background: var(--s1); flex-shrink: 0;
+  }
+  #now-playing.visible { display: flex; }
+  .np-thumb { width: 38px; height: 38px; border-radius: 6px; object-fit: cover; flex-shrink: 0; background: var(--border2); }
+  .np-info { flex: 1; min-width: 0; }
+  .np-title { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .np-src { font-size: 11px; color: var(--muted); }
+  .np-controls { display: flex; gap: 10px; align-items: center; flex-shrink: 0; }
+  .np-btn { background: none; border: none; color: var(--text2); cursor: pointer; padding: 4px; display: flex; }
+  .np-btn svg { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+  .np-btn.play {
+    width: 34px; height: 34px; background: var(--accent); border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .np-btn.play svg { stroke: white; width: 16px; height: 16px; }
+  #yt-player { position: fixed; bottom: -200px; left: 0; width: 1px; height: 1px; opacity: 0; }
+
+  /* ── SETTINGS VIEW ──────────────────────────────────────────────── */
+  #settings-view { gap: 0; }
+  .settings-group {
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 0;
+  }
+  .settings-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 13px 18px; border-bottom: 1px solid var(--border);
+  }
+  .settings-row:last-child { border-bottom: none; }
+  .settings-row label { font-size: 14px; color: var(--text); }
+  .settings-row span { font-size: 13px; color: var(--muted); }
+  .settings-input {
+    width: 100%; background: var(--s1); border: 1px solid var(--border);
+    border-radius: 10px; padding: 10px 14px; color: var(--text);
+    font-size: 14px; font-family: inherit; margin: 0 18px 12px;
+    width: calc(100% - 36px); outline: none;
+  }
+  .settings-input:focus { border-color: var(--border2); }
+  .s-btn {
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    width: calc(100% - 36px); margin: 8px 18px; padding: 12px;
+    border-radius: var(--r); font-size: 14px; font-weight: 500;
+    border: 1px solid var(--border); background: var(--s1); color: var(--text);
+    cursor: pointer; transition: all .15s;
+  }
+  .s-btn.primary { background: var(--accent); border-color: var(--accent); color: white; }
+  .s-btn.danger  { border-color: var(--red); color: var(--red); }
+  .s-btn svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 1.5; stroke-linecap: round; }
+
+  /* ── LOGIN ──────────────────────────────────────────────────────── */
+  #login {
+    position: fixed; inset: 0; background: var(--bg); z-index: 100;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 48px 28px; gap: 20px;
+  }
+  #login .brand { text-align: center; }
+  #login .brand-mark {
+    width: 56px; height: 56px; border-radius: 16px;
+    background: var(--accent-d); border: 1px solid rgba(200,144,106,.3);
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 16px;
+  }
+  #login .brand-mark svg { width: 28px; height: 28px; stroke: var(--accent); fill: none; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+  #login h1 { font-size: 26px; font-weight: 600; letter-spacing: -0.03em; }
+  #login p { color: var(--text2); font-size: 14px; text-align: center; line-height: 1.5; }
+  #login input {
+    width: 100%; background: var(--s1); border: 1px solid var(--border);
+    border-radius: var(--r); padding: 14px 16px;
+    color: var(--text); font-size: 16px; font-family: inherit; outline: none;
+    transition: border-color .15s; text-align: center; letter-spacing: 0.1em;
+  }
+  #login input:focus { border-color: var(--accent); }
+  #login button {
+    width: 100%; background: var(--accent); color: white; border: none;
+    border-radius: var(--r); padding: 14px; font-size: 15px; font-weight: 600;
+    cursor: pointer; transition: opacity .15s; font-family: inherit;
+  }
+  #login button:active { opacity: .85; }
+  .login-err { font-size: 13px; color: var(--red); text-align: center; display: none; }
+  #login .hint { font-size: 12px; color: var(--muted); text-align: center; }
+  #login a { color: var(--accent); text-decoration: none; }
+
+  /* ── MISC ───────────────────────────────────────────────────────── */
+  pre { background: #0a0e13; border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; font-size: 12px; overflow-x: auto; white-space: pre-wrap; word-break: break-word; font-family: 'JetBrains Mono', monospace; margin-top: 6px; }
+  a { color: var(--accent); text-decoration: none; }
+  code { background: var(--s2); padding: 2px 5px; border-radius: 4px; font-size: 12px; font-family: 'JetBrains Mono', monospace; }
+  strong { font-weight: 600; }
   </style>
 </head>
 <body>
 
 <!-- Login -->
 <div id="login">
-  <h1>Pulso</h1>
+  <div class="brand">
+    <div class="brand-mark">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+    </div>
+    <h1>Pulso</h1>
+  </div>
   <p>Seu secretário pessoal.</p>
-  <input type="password" id="login-pass" placeholder="Senha" autocomplete="current-password"
-    onkeydown="if(event.key==='Enter')doLogin()"/>
+  <input type="password" id="login-pass" placeholder="Senha" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()"/>
   <button onclick="doLogin()" id="login-btn">Entrar</button>
-  <div class="err" id="login-err">Senha incorreta</div>
-</div>
-
-<!-- First-time setup (after login, no settings saved yet) -->
-<div id="setup">
-  <h2>Configuração inicial</h2>
-  <p>Cole sua chave Gemini para ativar o assistente.</p>
-  <input type="password" id="setup-gemini" placeholder="Chave Gemini (AIza...)" autocomplete="off"/>
-  <button onclick="doSetup()">Salvar e entrar</button>
-  <p class="hint">Obtenha grátis em <a href="https://aistudio.google.com/apikey" target="_blank">aistudio.google.com/apikey</a></p>
+  <div class="login-err" id="login-err">Senha incorreta</div>
+  <p class="hint">Chave Gemini em <a href="https://aistudio.google.com/apikey" target="_blank">aistudio.google.com</a></p>
 </div>
 
 <!-- Header -->
 <header>
-  <div class="logo">Pul<span>so</span></div>
-  <div class="pills">
-    <div class="pill" id="pill-yt" onclick="connectYoutube()">▶ YouTube</div>
-    <div class="pill" id="pill-spotify" onclick="connectSpotify()">● Spotify</div>
-    <div class="pill" id="pill-gcal" onclick="connectGoogle()">📅 Agenda</div>
-    <div class="pill active" onclick="showTab('settings')">⚙</div>
+  <div class="wordmark">Pul<em>so</em></div>
+  <div class="status-pills">
+    <div class="spill" id="pill-yt" onclick="connectGoogle()">
+      <svg viewBox="0 0 10 10"><circle cx="5" cy="5" r="4" stroke="currentColor" stroke-width="1.5" fill="none"/></svg>
+      Google
+    </div>
+    <div class="spill" id="pill-spotify" onclick="connectSpotify()">
+      <svg viewBox="0 0 10 10"><circle cx="5" cy="5" r="4" stroke="currentColor" stroke-width="1.5" fill="none"/></svg>
+      Spotify
+    </div>
   </div>
 </header>
 
-<!-- Tabs -->
-<div class="tabs">
-  <div class="tab active" id="tab-dia" onclick="showTab('dia')">☀️ Dia</div>
-  <div class="tab" id="tab-chat" onclick="showTab('chat')">💬 Chat</div>
-  <div class="tab" id="tab-terminal" onclick="showTab('terminal')">⌨ Terminal</div>
-  <div class="tab" id="tab-player" onclick="showTab('player')">🎵</div>
-  <div class="tab" id="tab-settings" onclick="showTab('settings')">⚙</div>
-</div>
-
-<!-- Dia View -->
-<div class="view active" id="dia-view">
-  <div class="dia-greeting" id="dia-greeting">Olá, <span>Well</span> 👋</div>
-  <div class="dia-date" id="dia-date"></div>
+<!-- Home View -->
+<div class="view active" id="home-view">
+  <div class="home-hero">
+    <div class="home-greeting" id="dia-greeting">Olá, <strong>Well</strong></div>
+    <div class="home-date" id="dia-date"></div>
+  </div>
 
   <!-- Pomodoro -->
-  <div class="pomodoro">
-    <div class="pomo-label" id="pomo-label">FOCO</div>
-    <div class="pomo-timer" id="pomo-timer">25:00</div>
-    <div class="pomo-controls">
-      <button class="pomo-btn primary" id="pomo-start" onclick="pomodoroToggle()">▶ Iniciar</button>
-      <button class="pomo-btn" onclick="pomodoroReset()">↺ Reset</button>
-      <button class="pomo-btn" onclick="pomodoroSkip()">⏭ Skip</button>
+  <div class="section-label">Foco</div>
+  <div class="pomo-card">
+    <div class="pomo-ring">
+      <svg viewBox="0 0 64 64">
+        <circle class="bg" cx="32" cy="32" r="28"/>
+        <circle class="fg" id="pomo-circle" cx="32" cy="32" r="28"
+          stroke-dasharray="175.9" stroke-dashoffset="0"/>
+      </svg>
+      <div class="pomo-time-inner" id="pomo-timer">25:00</div>
+    </div>
+    <div class="pomo-info">
+      <div class="pomo-mode" id="pomo-label">Foco</div>
+      <div class="pomo-actions">
+        <button class="btn-sm primary" id="pomo-start" onclick="pomodoroToggle()">
+          <svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          Iniciar
+        </button>
+        <button class="btn-sm" onclick="pomodoroReset()">
+          <svg viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.95"/></svg>
+        </button>
+        <button class="btn-sm" onclick="pomodoroSkip()">
+          <svg viewBox="0 0 24 24"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19"/></svg>
+        </button>
+      </div>
     </div>
   </div>
 
   <!-- Energia -->
-  <div>
-    <div class="section-title">Energia hoje</div>
-    <div class="energy-row" id="energy-row">
-      <button class="energy-btn" onclick="setEnergy(1)" title="Esgotado">😴</button>
-      <button class="energy-btn" onclick="setEnergy(2)" title="Cansado">😕</button>
-      <button class="energy-btn" onclick="setEnergy(3)" title="Ok">😐</button>
-      <button class="energy-btn" onclick="setEnergy(4)" title="Bem">😊</button>
-      <button class="energy-btn" onclick="setEnergy(5)" title="Ótimo">🔥</button>
-    </div>
+  <div class="section-label">Energia hoje</div>
+  <div class="energy-row" id="energy-row">
+    <button class="energy-dot" onclick="setEnergy(1)" title="Esgotado">😴</button>
+    <button class="energy-dot" onclick="setEnergy(2)" title="Cansado">😕</button>
+    <button class="energy-dot" onclick="setEnergy(3)" title="Ok">😐</button>
+    <button class="energy-dot" onclick="setEnergy(4)" title="Bem">😊</button>
+    <button class="energy-dot" onclick="setEnergy(5)" title="Ótimo">🔥</button>
   </div>
 
-  <!-- Tarefas de hoje -->
-  <div>
-    <div class="section-title">Tarefas de hoje</div>
-    <div id="task-list"></div>
-    <div class="task-add">
-      <input type="text" id="task-input" placeholder="+ Nova tarefa..." onkeydown="if(event.key==='Enter')addTask()"/>
-      <button onclick="addTask()">+</button>
-    </div>
+  <!-- Tarefas -->
+  <div class="section-label">Tarefas</div>
+  <div id="task-list"></div>
+  <div class="task-add-row" style="border-bottom:1px solid var(--border)">
+    <input type="text" id="task-input" placeholder="Nova tarefa..." onkeydown="if(event.key==='Enter')addTask()"/>
+    <button onclick="addTask()">+</button>
   </div>
 
-  <!-- Plano de ação IA -->
-  <div>
-    <div class="section-title" style="display:flex;align-items:center;justify-content:space-between">
-      <span>Plano de ação IA</span>
-      <div style="display:flex;gap:6px">
-        <button onclick="loadActionPlan()" style="background:var(--accent);border:none;border-radius:6px;padding:4px 10px;color:white;font-size:12px;cursor:pointer">⚡ Gerar</button>
-        <button id="speak-btn" onclick="speakPlan()" style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:4px 10px;color:var(--text);font-size:12px;cursor:pointer">🔊</button>
-      </div>
+  <!-- Plano de ação -->
+  <div class="plan-header">
+    <div class="plan-label">Plano de ação</div>
+    <div class="plan-actions">
+      <button class="icon-btn primary" onclick="loadActionPlan()" title="Gerar">
+        <svg viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+      </button>
+      <button class="icon-btn" id="speak-btn" onclick="speakPlan()" title="Ouvir">
+        <svg viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+      </button>
     </div>
-    <div id="action-plan" style="font-size:13px;color:var(--muted);padding:8px 0">Clique em ⚡ Gerar para criar seu plano do dia.</div>
   </div>
+  <div id="action-plan">Toque em <strong>&#9889;</strong> para gerar seu plano do dia.</div>
 
-  <!-- Feed dos sites -->
-  <div>
-    <div class="section-title">Rede de sites</div>
-    <div id="site-feed"><div style="color:var(--muted);font-size:13px">Carregando...</div></div>
+  <!-- Feed -->
+  <div class="section-label">Rede</div>
+  <div id="site-feed" style="border-top:1px solid var(--border)">
+    <div class="feed-item"><div class="feed-dot"></div><div class="feed-body"><div class="feed-text" style="color:var(--muted)">Carregando...</div></div><div></div></div>
   </div>
 
   <!-- Alarme -->
-  <div>
-    <div class="section-title">Alarme matinal</div>
+  <div class="section-label">Notificações</div>
+  <div class="alarm-card">
     <div class="alarm-row">
-      <label>Horário do briefing</label>
+      <label>Briefing matinal</label>
       <input type="time" id="alarm-time" value="07:30" onchange="saveAlarm()"/>
     </div>
-    <div class="alarm-row" style="margin-top:6px">
-      <label>Notificações push</label>
+    <div class="alarm-row">
+      <label>Push ativo</label>
       <button class="toggle" id="push-toggle" onclick="togglePush()"></button>
     </div>
-    <div style="font-size:12px;color:var(--muted);margin-top:8px" id="push-status">
-      Ative para receber o briefing matinal no celular.
-    </div>
+    <div id="push-status">Ative para receber o briefing às 7h30.</div>
   </div>
 </div>
 
@@ -298,20 +610,20 @@
 <div class="view" id="chat-view">
   <div id="chat-msgs">
     <div class="msg sys" id="today-label"></div>
-    <div class="msg ai">Olá! Sou o Pulso 👋<br/><br/>
-      • 🎵 Pedir músicas: <em>"toca Djavan"</em><br/>
-      • 📅 Agenda: <em>"o que tenho hoje?"</em><br/>
-      • 🛠 Criar apps: <em>"crie um app de hábitos"</em><br/>
-      • 🎯 Objetivos 2027, 2030, aposentadoria<br/><br/>
+    <div class="msg ai">
+      Olá. Sou o Pulso — seu secretário pessoal.<br/><br/>
+      Posso ajudar com tarefas, música, criar apps, analisar fotos e gerenciar seus sites.<br/><br/>
       O que fazemos?
     </div>
   </div>
   <div id="chat-input-area">
-    <button id="camera-btn" onclick="openCamera()" title="Foto para IA">📷</button>
+    <button class="chat-tool-btn" onclick="openCamera()" title="Foto">
+      <svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+    </button>
     <input type="file" id="camera-input" accept="image/*" capture="environment" style="display:none" onchange="handlePhoto(this)"/>
-    <textarea id="user-input" placeholder="Mensagem ou descreva a foto..." rows="1"></textarea>
+    <textarea id="user-input" placeholder="Mensagem..." rows="1"></textarea>
     <button id="send-btn" onclick="sendMessage()">
-      <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+      <svg viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
     </button>
   </div>
 </div>
@@ -320,63 +632,107 @@
 <div class="view" id="terminal-view">
   <div id="terminal-output"></div>
   <div id="terminal-input-row">
-    <div id="terminal-prompt-label">well@pulso:~$</div>
-    <input type="text" id="terminal-input" placeholder="digite um comando..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+    <div id="terminal-prompt-label">well@pulso ~$</div>
+    <input type="text" id="terminal-input" placeholder="comando..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
   </div>
 </div>
 
 <!-- Player View -->
 <div class="view" id="player-view">
-  <div class="source-tabs">
-    <div class="src-tab active" id="src-yt" onclick="setSource('yt')">▶ YouTube</div>
-    <div class="src-tab" id="src-sp" onclick="setSource('spotify')">● Spotify</div>
+  <div class="src-tabs">
+    <div class="src-tab active" id="src-yt" onclick="setSource('yt')">YouTube</div>
+    <div class="src-tab" id="src-sp" onclick="setSource('spotify')">Spotify</div>
   </div>
-  <div class="search-bar">
-    <input type="text" id="search-input" placeholder="Buscar música, artista..." onkeydown="if(event.key==='Enter')doSearch()"/>
-    <button onclick="doSearch()">Buscar</button>
+  <div class="player-search">
+    <input type="text" id="search-input" placeholder="Buscar música ou artista..." onkeydown="if(event.key==='Enter')doSearch()"/>
+    <button class="btn-sm primary" onclick="doSearch()">
+      <svg viewBox="0 0 24 24" style="width:15px;height:15px;stroke:white;fill:none;stroke-width:2;stroke-linecap:round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    </button>
   </div>
   <div class="track-list" id="track-list">
-    <div style="color:var(--muted);font-size:13px;text-align:center;padding:40px 0">Busque uma música para começar</div>
+    <div style="padding:40px 18px;color:var(--muted);font-size:14px;text-align:center">Busque uma música para começar</div>
+  </div>
+  <div id="now-playing">
+    <img class="np-thumb" id="np-thumb" src="" alt=""/>
+    <div class="np-info">
+      <div class="np-title" id="np-title">—</div>
+      <div class="np-src" id="np-src">—</div>
+    </div>
+    <div class="np-controls">
+      <button class="np-btn" onclick="prevTrack()">
+        <svg viewBox="0 0 24 24"><polygon points="19 20 9 12 19 4 19 20"/><line x1="5" y1="19" x2="5" y2="5"/></svg>
+      </button>
+      <button class="np-btn play" id="np-play-btn" onclick="togglePlay()">
+        <svg viewBox="0 0 24 24" id="np-play-icon"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+      </button>
+      <button class="np-btn" onclick="nextTrack()">
+        <svg viewBox="0 0 24 24"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19"/></svg>
+      </button>
+    </div>
   </div>
 </div>
 
 <!-- Settings View -->
 <div class="view" id="settings-view">
-  <div class="s-section">
-    <div class="s-title">Gemini API</div>
-    <input class="s-input" type="password" id="s-gemini" placeholder="AIza..."/>
+  <div class="section-label" style="margin-top:16px">Integrações</div>
+  <div class="settings-group">
+    <div class="settings-row"><label>Google (Calendar, Fit, YouTube)</label><span id="google-status">—</span></div>
+    <div class="settings-row"><label>Spotify</label><span id="spotify-status">—</span></div>
   </div>
-  <div class="s-section">
-    <div class="s-title">YouTube / Google</div>
-    <input class="s-input" type="text" id="s-yt-key" placeholder="API Key pública (AIza...)"/>
-    <input class="s-input" type="text" id="s-google-cid" placeholder="OAuth Client ID (para Calendar + playlists)"/>
-    <button class="s-btn" style="margin-top:10px" onclick="connectGoogle()">Conectar conta Google →</button>
+  <button class="s-btn primary" onclick="connectGoogle()" style="margin-top:14px">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+    Conectar Google
+  </button>
+  <button class="s-btn" onclick="connectSpotify()">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M8 12.5c2.5-1 5.5-1 8 0M7 9.5c3.5-1.5 7.5-1.5 11 0M9 15.5c2-0.7 4-0.7 6 0"/></svg>
+    Conectar Spotify
+  </button>
+
+  <div class="section-label">Chaves de API</div>
+  <input class="settings-input" type="password" id="s-gemini" placeholder="Gemini API Key (AIza...)"/>
+  <input class="settings-input" type="text" id="s-yt-key" placeholder="YouTube API Key"/>
+  <button class="s-btn primary" onclick="saveSettings()">
+    <svg viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+    Salvar configurações
+  </button>
+
+  <div class="section-label">Sobre</div>
+  <div class="settings-group">
+    <div class="settings-row"><label>Versão</label><span>1.0.0</span></div>
+    <div class="settings-row"><label>Modelo IA</label><span>Gemini 2.0 Flash</span></div>
+    <div class="settings-row"><label>Hosting</label><span>Cloudflare Workers</span></div>
   </div>
-  <div class="s-section">
-    <div class="s-title">Spotify</div>
-    <div style="font-size:13px;color:var(--muted);margin-bottom:8px">Client ID para OAuth PKCE</div>
-    <input class="s-input" type="text" id="s-sp-cid" placeholder="Client ID Spotify"/>
-    <button class="s-btn" style="margin-top:10px" onclick="connectSpotify()">Conectar Spotify →</button>
-  </div>
-  <button class="s-btn" onclick="saveSettings()">Salvar configurações</button>
-  <button class="s-btn sec" onclick="clearAll()" style="margin-top:8px">Apagar dados locais</button>
+  <button class="s-btn danger" onclick="clearAll()" style="margin-top:6px;margin-bottom:20px">
+    <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+    Apagar dados locais
+  </button>
 </div>
 
-<!-- Now Playing Bar -->
-<div id="now-playing">
-  <img class="np-thumb" id="np-thumb" src="" alt=""/>
-  <div class="np-info">
-    <div class="np-title" id="np-title">—</div>
-    <div class="np-src" id="np-src">—</div>
-  </div>
-  <div class="np-controls">
-    <button class="np-btn" onclick="prevTrack()">⏮</button>
-    <button class="np-btn play" id="np-play-btn" onclick="togglePlay()">▶</button>
-    <button class="np-btn" onclick="nextTrack()">⏭</button>
-  </div>
-</div>
+<!-- Bottom nav -->
+<nav class="bottom-nav">
+  <button class="nav-item active" id="nav-home" onclick="showTab('home')">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+    <span>Início</span>
+  </button>
+  <button class="nav-item" id="nav-chat" onclick="showTab('chat')">
+    <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+    <span>Chat</span>
+  </button>
+  <button class="nav-item" id="nav-terminal" onclick="showTab('terminal')">
+    <svg viewBox="0 0 24 24"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+    <span>Terminal</span>
+  </button>
+  <button class="nav-item" id="nav-player" onclick="showTab('player')">
+    <svg viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+    <span>Player</span>
+  </button>
+  <button class="nav-item" id="nav-settings" onclick="showTab('settings')">
+    <svg viewBox="0 0 24 24"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>
+    <span>Config</span>
+  </button>
+</nav>
 
-<!-- Hidden YouTube Player -->
+<!-- Hidden YT Player -->
 <div id="yt-player"></div>
 
 <script>
@@ -388,35 +744,29 @@ const S = {
 };
 
 // ── Constants ────────────────────────────────────────────────────
-const DEFAULT_GEMINI_KEY   = 'AIzaSyDcbvEGd5-YW3cP-J8cZiIDMDoFAnx3RpI';
-const DEFAULT_GOOGLE_CID   = '519265717140-sspsr7do8gebh305kbfa1l6spe5vdveq.apps.googleusercontent.com';
+const DEFAULT_GEMINI_KEY = 'AIzaSyDcbvEGd5-YW3cP-J8cZiIDMDoFAnx3RpI';
 const DEFAULT_YT_KEY     = 'AIzaSyDcbvEGd5-YW3cP-J8cZiIDMDoFAnx3RpI';
-const GEMINI_MODEL = 'gemini-2.0-flash';
-const GEMINI_API = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
-const YT_API = 'https://www.googleapis.com/youtube/v3';
-const SP_API = 'https://api.spotify.com/v1';
-const SP_CLIENT_ID = 'b0f6f8567ca74d2bb988f3e45fe99f8c';
-const SP_REDIRECT = window.location.origin + '/spotify/callback/';
-const SP_SCOPES = 'streaming user-read-email user-read-private user-read-playback-state user-modify-playback-state playlist-modify-public playlist-modify-private user-library-read';
+const DEFAULT_GOOGLE_CID = '519265717140-sspsr7do8gebh305kbfa1l6spe5vdveq.apps.googleusercontent.com';
+const GEMINI_MODEL       = 'gemini-2.0-flash';
+const GEMINI_API         = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
+const YT_API             = 'https://www.googleapis.com/youtube/v3';
+const SP_API             = 'https://api.spotify.com/v1';
+const SP_CLIENT_ID       = 'b0f6f8567ca74d2bb988f3e45fe99f8c';
+const SP_REDIRECT        = window.location.origin + '/spotify/callback/';
+const SP_SCOPES          = 'streaming user-read-email user-read-private user-read-playback-state user-modify-playback-state playlist-modify-public playlist-modify-private user-library-read';
+const VAPID_PUBLIC       = 'BH6q5lb8vcCBGxvnDIJIgYd2eHPLd3LxW3RKd1fjmkqbG2p3a6eNDOxkJvLTUcy1YBKs2kFgfpKX7uSu61B24Zw';
+const PASSWORD_HASH      = '45b743b9bf2f6a184b5e699897c0548b82d18ae34b5bc6e13d4f1a7c6bb5c81a';
 
 // ── State ────────────────────────────────────────────────────────
-let chatMessages = [];
-let isLoading = false;
-let ytPlayer = null;
-let ytReady = false;
-let currentSource = 'yt';
-let currentTracks = [];
-let currentIndex = -1;
-let isPlaying = false;
-let googleToken = null;
-let spotifyToken = null;
+let chatMessages = [], isLoading = false;
+let ytPlayer = null, ytReady = false;
+let currentSource = 'yt', currentTracks = [], currentIndex = -1, isPlaying = false;
+let googleToken = null, spotifyToken = null;
 
-// ── Auth — senha local, hash SHA-256 ─────────────────────────────
-const PASSWORD_HASH = '45b743b9bf2f6a184b5e699897c0548b82d18ae34b5bc6e13d4f1a7c6bb5c81a';
-
-async function hashPassword(pass) {
-  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pass));
-  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+// ── Auth ─────────────────────────────────────────────────────────
+async function hashPassword(p) {
+  const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(p));
+  return Array.from(new Uint8Array(b)).map(x => x.toString(16).padStart(2,'0')).join('');
 }
 
 async function doLogin() {
@@ -428,82 +778,81 @@ async function doLogin() {
   const hash = await hashPassword(pass);
   if (hash === PASSWORD_HASH) {
     S.set('pulso_auth', '1');
-    if (!S.get('gemini_key')) S.set('gemini_key', DEFAULT_GEMINI_KEY);
-    if (!S.get('yt_api_key')) S.set('yt_api_key', DEFAULT_YT_KEY);
+    if (!S.get('gemini_key'))       S.set('gemini_key', DEFAULT_GEMINI_KEY);
+    if (!S.get('yt_api_key'))       S.set('yt_api_key', DEFAULT_YT_KEY);
+    if (!S.get('google_client_id')) S.set('google_client_id', DEFAULT_GOOGLE_CID);
     document.getElementById('login').style.display = 'none';
-    init();
+    boot();
   } else {
     err.style.display = 'block';
     btn.textContent = 'Entrar'; btn.disabled = false;
   }
 }
 
-function syncSettings() { /* settings ficam no localStorage por enquanto */ }
-
-// ── Setup (first time) ────────────────────────────────────────────
-function doSetup() {
-  const k = document.getElementById('setup-gemini').value.trim();
-  if (!k.startsWith('AIza')) { alert('Chave inválida. Deve começar com AIza'); return; }
-  S.set('gemini_key', k);
-  syncSettings();
-  document.getElementById('setup').style.display = 'none';
-  init();
+// ── Navigation ───────────────────────────────────────────────────
+function showTab(name) {
+  const map = { home: 'home', chat: 'chat', terminal: 'terminal', player: 'player', settings: 'settings' };
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById(name + '-view').classList.add('active');
+  document.getElementById('nav-' + name).classList.add('active');
+  if (name === 'terminal') document.getElementById('terminal-input').focus();
 }
 
-function init() {
-  if (!S.get('gemini_key')) return;
+// ── Boot ─────────────────────────────────────────────────────────
+function boot() {
   document.getElementById('login').style.display = 'none';
-  document.getElementById('setup').style.display = 'none';
-  document.getElementById('today-label').textContent =
-    new Date().toLocaleDateString('pt-BR', {weekday:'long', day:'numeric', month:'long'});
+  const now = new Date();
+  const h = now.getHours();
+  const g = h < 12 ? 'Bom dia' : h < 18 ? 'Boa tarde' : 'Boa noite';
+  document.getElementById('dia-greeting').innerHTML = `${g}, <strong>Well</strong>`;
+  document.getElementById('dia-date').textContent = now.toLocaleDateString('pt-BR', {weekday:'long', day:'numeric', month:'long'});
+  document.getElementById('today-label').textContent = now.toLocaleDateString('pt-BR', {weekday:'long', day:'numeric', month:'long'});
 
-  // Restore tokens
+  // Status pills
   googleToken = S.get('google_token');
   spotifyToken = S.get('spotify_token');
-  if (googleToken) { document.getElementById('pill-yt').classList.add('on'); document.getElementById('pill-gcal').classList.add('on'); }
-  if (spotifyToken) document.getElementById('pill-spotify').classList.add('on');
+  if (googleToken)  { document.getElementById('pill-yt').classList.add('on'); document.getElementById('google-status').textContent = 'Conectado'; }
+  if (spotifyToken) { document.getElementById('pill-spotify').classList.add('on'); document.getElementById('spotify-status').textContent = 'Conectado'; }
 
-  // Load settings fields
+  // Settings fields
   document.getElementById('s-gemini').value = S.get('gemini_key') || '';
-  document.getElementById('s-yt-key').value = S.get('yt_api_key') || 'AIzaSyDcbvEGd5-YW3cP-J8cZiIDMDoFAnx3RpI';
-  document.getElementById('s-google-cid').value = S.get('google_client_id') || '';
-  document.getElementById('s-sp-cid').value = SP_CLIENT_ID;
+  document.getElementById('s-yt-key').value = S.get('yt_api_key') || '';
 
+  // Push toggle
+  if (S.get('push_enabled') === '1') document.getElementById('push-toggle').classList.add('on');
+
+  loadTasks();
+  loadFeed();
+  renderEnergy();
   loadYouTubeAPI();
+  initTerminal();
+
+  if (location.search.includes('tab=chat'))     showTab('chat');
+  if (location.search.includes('tab=terminal')) showTab('terminal');
+  if (location.search.includes('briefing=1'))   { showTab('home'); autoMorningBriefing(); }
+  if (location.search.includes('report=1'))     { showTab('home'); loadActionPlan(); }
 }
 
+// ── Settings ─────────────────────────────────────────────────────
 function saveSettings() {
   const g = document.getElementById('s-gemini').value.trim();
-  const yk = document.getElementById('s-yt-key').value.trim();
-  const gc = document.getElementById('s-google-cid').value.trim();
+  const y = document.getElementById('s-yt-key').value.trim();
   if (g) S.set('gemini_key', g);
-  if (yk) S.set('yt_api_key', yk);
-  if (gc) S.set('google_client_id', gc);
-  syncSettings();
+  if (y) S.set('yt_api_key', y);
+  addMsg('ai', 'Configurações salvas.');
   showTab('chat');
-  addMsg('ai', '✅ Configurações salvas e sincronizadas!');
 }
 
 function clearAll() {
-  if (confirm('Apagar todos os dados?')) { localStorage.clear(); location.reload(); }
+  if (confirm('Apagar todos os dados locais?')) { localStorage.clear(); location.reload(); }
 }
 
-// ── Tabs ─────────────────────────────────────────────────────────
-function showTab(name) {
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-  document.getElementById('tab-' + name).classList.add('active');
-  document.getElementById(name + '-view').classList.add('active');
-}
-
-// ── Google OAuth ──────────────────────────────────────────────────
+// ── Google OAuth ─────────────────────────────────────────────────
 function connectGoogle() {
   const cid = S.get('google_client_id') || DEFAULT_GOOGLE_CID;
-  if (!cid) { addMsg('ai', '⚠️ Client ID não configurado.'); showTab('chat'); return; }
-  S.set('google_client_id', cid);
   const params = new URLSearchParams({
-    client_id: cid,
-    redirect_uri: window.location.origin,
+    client_id: cid, redirect_uri: window.location.origin,
     response_type: 'token',
     scope: [
       'https://www.googleapis.com/auth/youtube',
@@ -521,17 +870,14 @@ function connectYoutube() { connectGoogle(); }
 
 // ── Spotify OAuth PKCE ────────────────────────────────────────────
 async function connectSpotify() {
-  if (spotifyToken) { addMsg('ai', '✅ Spotify já conectado!'); showTab('chat'); return; }
+  if (spotifyToken) { addMsg('ai', 'Spotify já conectado.'); showTab('chat'); return; }
   const verifier = generateRandom(64);
   const challenge = await pkceChallenge(verifier);
   S.set('spotify_code_verifier', verifier);
   const params = new URLSearchParams({
-    client_id: SP_CLIENT_ID,
-    response_type: 'code',
-    redirect_uri: SP_REDIRECT,
-    code_challenge_method: 'S256',
-    code_challenge: challenge,
-    scope: SP_SCOPES
+    client_id: SP_CLIENT_ID, response_type: 'code',
+    redirect_uri: SP_REDIRECT, code_challenge_method: 'S256',
+    code_challenge: challenge, scope: SP_SCOPES
   });
   window.location.href = 'https://accounts.spotify.com/authorize?' + params;
 }
@@ -541,226 +887,176 @@ function generateRandom(len) {
   crypto.getRandomValues(arr);
   return btoa(String.fromCharCode(...arr)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
 }
-async function pkceChallenge(verifier) {
-  const data = new TextEncoder().encode(verifier);
-  const digest = await crypto.subtle.digest('SHA-256', data);
-  return btoa(String.fromCharCode(...new Uint8Array(digest))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
+
+async function pkceChallenge(v) {
+  const d = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(v));
+  return btoa(String.fromCharCode(...new Uint8Array(d))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
 }
 
-// Handle Google implicit token on redirect
 function handleOAuthRedirect() {
   const hash = new URLSearchParams(window.location.hash.slice(1));
   const token = hash.get('access_token');
   if (token) {
-    S.set('google_token', token);
-    googleToken = token;
+    S.set('google_token', token); googleToken = token;
     window.history.replaceState({}, '', '/');
     document.getElementById('pill-yt').classList.add('on');
-    document.getElementById('pill-gcal').classList.add('on');
-    addMsg('ai', '✅ Google conectado! Já posso criar playlists e ver sua agenda.');
+    document.getElementById('google-status').textContent = 'Conectado';
+    addMsg('ai', 'Google conectado. Calendar, Fitness e YouTube disponíveis.');
     showTab('chat');
   }
-  // Handle Spotify token restore
   spotifyToken = S.get('spotify_token');
-  if (spotifyToken) document.getElementById('pill-spotify').classList.add('on');
+  if (spotifyToken) {
+    document.getElementById('pill-spotify').classList.add('on');
+    document.getElementById('spotify-status').textContent = 'Conectado';
+  }
 }
 
 // ── YouTube IFrame API ────────────────────────────────────────────
 function loadYouTubeAPI() {
   if (window.YT) { ytReady = true; return; }
-  const tag = document.createElement('script');
-  tag.src = 'https://www.youtube.com/iframe_api';
-  document.head.appendChild(tag);
+  const s = document.createElement('script');
+  s.src = 'https://www.youtube.com/iframe_api';
+  document.head.appendChild(s);
 }
 
-window.onYouTubeIframeAPIReady = function() {
+window.onYouTubeIframeAPIReady = () => {
   ytPlayer = new YT.Player('yt-player', {
     height: '1', width: '1',
     events: {
       onReady: () => { ytReady = true; },
-      onStateChange: (e) => {
+      onStateChange: e => {
         if (e.data === YT.PlayerState.ENDED) nextTrack();
         isPlaying = e.data === YT.PlayerState.PLAYING;
-        document.getElementById('np-play-btn').textContent = isPlaying ? '⏸' : '▶';
+        const icon = document.getElementById('np-play-icon');
+        if (icon) icon.innerHTML = isPlaying
+          ? '<rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>'
+          : '<polygon points="5 3 19 12 5 21 5 3"/>';
       }
     }
   });
 };
 
 // ── YouTube Search ────────────────────────────────────────────────
-async function searchYouTube(query) {
-  const key = S.get('yt_api_key') || 'AIzaSyDcbvEGd5-YW3cP-J8cZiIDMDoFAnx3RpI';
-  const params = new URLSearchParams({ part:'snippet', q:query, maxResults:10, type:'video', videoCategoryId:'10', key });
-  const res = await fetch(`${YT_API}/search?${params}`);
-  const data = await res.json();
-  return (data.items || []).map(v => ({
-    id: v.id.videoId,
-    title: v.snippet.title,
-    artist: v.snippet.channelTitle,
-    thumb: v.snippet.thumbnails?.default?.url,
-    source: 'youtube'
+async function searchYouTube(q) {
+  const key = S.get('yt_api_key') || DEFAULT_YT_KEY;
+  const params = new URLSearchParams({ part:'snippet', q, maxResults:10, type:'video', videoCategoryId:'10', key });
+  const r = await fetch(`${YT_API}/search?${params}`);
+  const d = await r.json();
+  return (d.items||[]).map(v => ({
+    id: v.id.videoId, title: v.snippet.title, artist: v.snippet.channelTitle,
+    thumb: v.snippet.thumbnails?.default?.url, source: 'youtube'
   }));
 }
 
 // ── Spotify Search ────────────────────────────────────────────────
-async function searchSpotify(query) {
-  if (!spotifyToken) {
-    addMsg('ai', 'Spotify não conectado. Clique em "● Spotify" para conectar.');
-    showTab('chat');
-    return [];
-  }
-  const params = new URLSearchParams({ q:query, type:'track', limit:10 });
-  const res = await fetch(`${SP_API}/search?${params}`, { headers: { Authorization: 'Bearer ' + spotifyToken } });
-  const data = await res.json();
-  return (data.tracks?.items || []).map(t => ({
-    id: t.id,
-    uri: t.uri,
-    title: t.name,
-    artist: t.artists.map(a=>a.name).join(', '),
+async function searchSpotify(q) {
+  if (!spotifyToken) { addMsg('ai', 'Spotify não conectado.'); showTab('chat'); return []; }
+  const r = await fetch(`${SP_API}/search?${new URLSearchParams({q,type:'track',limit:10})}`, { headers: { Authorization: 'Bearer '+spotifyToken } });
+  const d = await r.json();
+  return (d.tracks?.items||[]).map(t => ({
+    id: t.id, uri: t.uri, title: t.name, artist: t.artists.map(a=>a.name).join(', '),
     thumb: t.album.images?.[2]?.url,
-    duration: Math.floor(t.duration_ms/60000) + ':' + String(Math.floor((t.duration_ms%60000)/1000)).padStart(2,'0'),
+    duration: Math.floor(t.duration_ms/60000)+':'+String(Math.floor((t.duration_ms%60000)/1000)).padStart(2,'0'),
     source: 'spotify'
   }));
 }
 
-// ── Player Controls ───────────────────────────────────────────────
+// ── Player ────────────────────────────────────────────────────────
 function setSource(src) {
   currentSource = src;
   document.querySelectorAll('.src-tab').forEach(t => t.classList.remove('active'));
-  document.getElementById('src-' + src).classList.add('active');
+  document.getElementById('src-'+src).classList.add('active');
 }
 
 async function doSearch() {
   const q = document.getElementById('search-input').value.trim();
   if (!q) return;
   const list = document.getElementById('track-list');
-  list.innerHTML = '<div style="color:var(--muted);text-align:center;padding:20px">Buscando...</div>';
+  list.innerHTML = `<div style="padding:40px 18px;color:var(--muted);font-size:14px;text-align:center">Buscando...</div>`;
   try {
     const tracks = currentSource === 'yt' ? await searchYouTube(q) : await searchSpotify(q);
-    currentTracks = tracks;
-    renderTracks(tracks);
-  } catch(e) {
-    list.innerHTML = `<div style="color:var(--muted);text-align:center;padding:20px">Erro: ${e.message}</div>`;
-  }
+    currentTracks = tracks; renderTracks(tracks);
+  } catch(e) { list.innerHTML = `<div style="padding:20px 18px;color:var(--muted)">Erro: ${e.message}</div>`; }
 }
 
 function renderTracks(tracks) {
   const list = document.getElementById('track-list');
-  if (!tracks.length) { list.innerHTML = '<div style="color:var(--muted);text-align:center;padding:20px">Nenhum resultado</div>'; return; }
+  if (!tracks.length) { list.innerHTML = '<div style="padding:40px 18px;color:var(--muted);font-size:14px;text-align:center">Nenhum resultado</div>'; return; }
   list.innerHTML = '';
   tracks.forEach((t, i) => {
     const div = document.createElement('div');
     div.className = 'track' + (i === currentIndex ? ' playing' : '');
     div.onclick = () => playTrack(i);
-    div.innerHTML = `
-      <img class="track-thumb" src="${t.thumb || ''}" onerror="this.style.background='var(--border)'"/>
-      <div class="track-info">
-        <div class="track-title">${t.title}</div>
-        <div class="track-sub">${t.artist}</div>
-      </div>
-      ${t.duration ? `<div class="track-dur">${t.duration}</div>` : ''}
-    `;
+    div.innerHTML = `<img class="track-thumb" src="${t.thumb||''}" onerror="this.style.background='var(--border2)'"/><div class="track-info"><div class="track-title">${t.title}</div><div class="track-sub">${t.artist}</div></div>${t.duration?`<div class="track-dur">${t.duration}</div>`:''}`;
     list.appendChild(div);
   });
 }
 
-function playTrack(index) {
-  const t = currentTracks[index];
-  if (!t) return;
-  currentIndex = index;
-
-  // Update now playing bar
+function playTrack(i) {
+  const t = currentTracks[i]; if (!t) return;
+  currentIndex = i;
   document.getElementById('now-playing').classList.add('visible');
   document.getElementById('np-title').textContent = t.title;
-  document.getElementById('np-src').textContent = (t.source === 'youtube' ? '▶ YouTube' : '● Spotify') + ' · ' + t.artist;
+  document.getElementById('np-src').textContent = (t.source==='youtube'?'YouTube':'Spotify')+' · '+t.artist;
   document.getElementById('np-thumb').src = t.thumb || '';
-
   if (t.source === 'youtube' && ytPlayer && ytReady) {
-    ytPlayer.loadVideoById(t.id);
-    isPlaying = true;
-    document.getElementById('np-play-btn').textContent = '⏸';
-  } else if (t.source === 'spotify') {
-    playSpotify(t.uri);
-  }
-
+    ytPlayer.loadVideoById(t.id); isPlaying = true;
+    document.getElementById('np-play-icon').innerHTML = '<rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>';
+  } else if (t.source === 'spotify') { playSpotify(t.uri); }
   renderTracks(currentTracks);
 }
 
 async function playSpotify(uri) {
   if (!spotifyToken) return;
-  // Try Web Playback SDK or fallback to Connect API
   try {
-    await fetch(`${SP_API}/me/player/play`, {
-      method: 'PUT',
-      headers: { Authorization: 'Bearer ' + spotifyToken, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ uris: [uri] })
-    });
+    await fetch(`${SP_API}/me/player/play`, { method:'PUT', headers:{Authorization:'Bearer '+spotifyToken,'Content-Type':'application/json'}, body:JSON.stringify({uris:[uri]}) });
     isPlaying = true;
-    document.getElementById('np-play-btn').textContent = '⏸';
-  } catch(e) { console.error(e); }
+  } catch(e) {}
 }
 
 function togglePlay() {
-  if (currentSource === 'yt' && ytPlayer && ytReady) {
-    if (isPlaying) { ytPlayer.pauseVideo(); } else { ytPlayer.playVideo(); }
-  } else if (currentSource === 'spotify' && spotifyToken) {
-    const action = isPlaying ? 'pause' : 'play';
-    fetch(`${SP_API}/me/player/${action}`, { method: 'PUT', headers: { Authorization: 'Bearer ' + spotifyToken } });
+  if (currentSource==='yt' && ytPlayer && ytReady) { isPlaying?ytPlayer.pauseVideo():ytPlayer.playVideo(); }
+  else if (currentSource==='spotify' && spotifyToken) {
+    fetch(`${SP_API}/me/player/${isPlaying?'pause':'play'}`, {method:'PUT',headers:{Authorization:'Bearer '+spotifyToken}});
   }
 }
 
-function nextTrack() { if (currentIndex < currentTracks.length - 1) playTrack(currentIndex + 1); }
-function prevTrack() { if (currentIndex > 0) playTrack(currentIndex - 1); }
+function nextTrack() { if (currentIndex < currentTracks.length-1) playTrack(currentIndex+1); }
+function prevTrack() { if (currentIndex > 0) playTrack(currentIndex-1); }
 
 // ── Gemini ────────────────────────────────────────────────────────
 const SYSTEM = `Você é o Pulso — secretário pessoal de Well Souza.
 
-## Quem é Well
+## Contexto
 Editor, designer e desenvolvedor independente. Samsung S20 + Galaxy Watch Ultra.
-Acessa o Pulso no celular, iPad e Mac.
 
-## Projetos ativos
-- Benfazeja Editora: 103 títulos, META 2027 = finalista prêmio literário nacional, concurso 2025 a lançar
-- Concursosliterarios.net.br: diretório de concursos, 17 organizadores no CRM
-- Parlatudo: plugin CRM WordPress em todos os sites da rede
+## Projetos
+- Benfazeja Editora: 103 títulos, meta 2027 = finalista prêmio literário nacional
+- Concursosliterarios.net.br: diretório, 17 organizadores no CRM
+- Parlatudo: plugin CRM WordPress
 - Sites: wellsouza.com.br, benfazeja.com.br, editoratrevo.com.br, luasites.com.br
 
 ## Objetivos
-- 2027: Benfazeja reconhecida nacionalmente (finalista Jabuti, Oceanos ou SP Literatura)
-- 2030: negócio editorial sustentável, 150+ títulos, distribuição nacional
-- Aposentadoria: renda passiva via catálogo + sistemas digitais
-
-## Capacidades do Pulso
-- Player YouTube e Spotify
-- Google Calendar e Fit (quando conectados)
-- Criar mini-apps HTML
-- Terminal para gerenciar sites
+- 2027: Benfazeja em finalista nacional (Jabuti, Oceanos, SP Literatura)
+- 2030: negócio editorial sustentável, 150+ títulos
+- Aposentadoria: renda passiva
 
 ## Ações especiais
-Música → <PLAY_MUSIC query="artista ou música">
-App   → <APP_HTML nome="slug" titulo="Título"><!DOCTYPE html>...</APP_HTML>
+Música: <PLAY_MUSIC query="artista">
+App:    <APP_HTML nome="slug" titulo="Título"><!DOCTYPE html>...</APP_HTML>
 
-## Como responder
-Direto ao ponto. Respostas curtas no celular (máx 5 linhas).
-Sugira o próximo passo concreto quando relevante. PT-BR.`;
+Respostas curtas. PT-BR.`;
 
 async function callGemini(text) {
   const key = S.get('gemini_key');
-  const history = chatMessages.slice(-10).map(m => ({
-    role: m.role === 'user' ? 'user' : 'model',
-    parts: [{ text: m.content }]
-  }));
-  const body = {
-    system_instruction: { parts: [{ text: SYSTEM }] },
-    contents: [...history, { role:'user', parts:[{ text }] }],
-    generationConfig: { maxOutputTokens: 2048, temperature: 0.9 }
-  };
+  const history = chatMessages.slice(-10).map(m => ({ role: m.role==='user'?'user':'model', parts:[{text:m.content}] }));
   const res = await fetch(`${GEMINI_API}?key=${key}`, {
-    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({ system_instruction:{parts:[{text:SYSTEM}]}, contents:[...history,{role:'user',parts:[{text}]}], generationConfig:{maxOutputTokens:2048,temperature:0.9} })
   });
-  if (!res.ok) { const e = await res.json(); throw new Error(e.error?.message || 'Erro Gemini'); }
-  const data = await res.json();
-  return data.candidates?.[0]?.content?.parts?.[0]?.text || '(sem resposta)';
+  if (!res.ok) { const e=await res.json(); throw new Error(e.error?.message||'Erro Gemini'); }
+  const d = await res.json();
+  return d.candidates?.[0]?.content?.parts?.[0]?.text || '(sem resposta)';
 }
 
 async function sendMessage() {
@@ -769,57 +1065,45 @@ async function sendMessage() {
   if (!text || isLoading) return;
   input.value = ''; input.style.height = 'auto';
   addMsg('user', text);
-  chatMessages.push({ role:'user', content:text });
+  chatMessages.push({role:'user',content:text});
   setLoading(true);
   try {
     const reply = await callGemini(text);
-    chatMessages.push({ role:'assistant', content:reply });
-
+    chatMessages.push({role:'assistant',content:reply});
     const playMatch = reply.match(/<PLAY_MUSIC\s+query="([^"]+)">/);
-    const appMatch = reply.match(/<APP_HTML\s+nome="([^"]+)"\s+titulo="([^"]+)">([\s\S]*?)<\/APP_HTML>/);
-
+    const appMatch  = reply.match(/<APP_HTML\s+nome="([^"]+)"\s+titulo="([^"]+)">([\s\S]*?)<\/APP_HTML>/);
     if (playMatch) {
       const q = playMatch[1];
       const clean = reply.replace(/<PLAY_MUSIC[^>]*>/,'').trim();
       if (clean) addMsg('ai', clean);
-      addMsg('ai', `🎵 Buscando: <em>${q}</em>...`);
       const tracks = await searchYouTube(q);
-      if (tracks.length) {
-        currentTracks = tracks;
-        currentSource = 'yt';
-        playTrack(0);
-        showTab('player');
-        renderTracks(tracks);
-      } else { addMsg('ai', 'Não encontrei resultados para essa busca.'); }
+      if (tracks.length) { currentTracks=tracks; currentSource='yt'; playTrack(0); showTab('player'); renderTracks(tracks); }
+      else addMsg('ai','Não encontrei resultados.');
     } else if (appMatch) {
       const [,nome,titulo,html] = appMatch;
       const clean = reply.replace(/<APP_HTML[\s\S]*?<\/APP_HTML>/,'').trim();
       if (clean) addMsg('ai', clean);
-      const blob = new Blob([html], {type:'text/html'});
-      const url = URL.createObjectURL(blob);
+      const url = URL.createObjectURL(new Blob([html],{type:'text/html'}));
       const card = document.createElement('div');
-      card.style.cssText = 'background:var(--surface);border:1px solid var(--accent-dim);border-radius:12px;padding:14px;margin-top:4px';
-      card.innerHTML = `<div style="color:var(--accent);font-size:14px;font-weight:600;margin-bottom:6px">✅ App: ${titulo}</div><a href="${url}" target="_blank" style="background:var(--accent);color:white;padding:7px 14px;border-radius:8px;text-decoration:none;font-size:13px;font-weight:600">Abrir app →</a>`;
+      card.style.cssText = 'background:var(--s1);border:1px solid var(--border);border-radius:var(--r);padding:14px;margin-top:4px';
+      card.innerHTML = `<div style="font-size:13px;font-weight:600;margin-bottom:8px">${titulo}</div><a href="${url}" target="_blank" style="background:var(--accent);color:white;padding:7px 14px;border-radius:8px;text-decoration:none;font-size:13px;font-weight:500">Abrir</a>`;
       document.getElementById('chat-msgs').appendChild(card);
-    } else {
-      addMsg('ai', reply);
-    }
-  } catch(e) { addMsg('ai', `Erro: ${e.message}`); }
+    } else { addMsg('ai', reply); }
+  } catch(e) { addMsg('ai','Erro: '+e.message); }
   finally { setLoading(false); }
 }
 
 function addMsg(role, text) {
   const div = document.createElement('div');
-  div.className = 'msg ' + (role === 'user' ? 'user' : role === 'sys' ? 'sys' : 'ai');
+  div.className = 'msg '+(role==='user'?'user':role==='sys'?'sys':'ai');
   div.innerHTML = text
     .replace(/```([\s\S]*?)```/g,'<pre>$1</pre>')
-    .replace(/`([^`]+)`/g,'<code style="background:#1a1a1a;padding:2px 5px;border-radius:4px;font-size:12px">$1</code>')
+    .replace(/`([^`]+)`/g,'<code>$1</code>')
     .replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>')
     .replace(/\[([^\]]+)\]\((https?:[^)]+)\)/g,'<a href="$2" target="_blank">$1</a>')
     .replace(/\n/g,'<br/>');
   const msgs = document.getElementById('chat-msgs');
-  msgs.appendChild(div);
-  msgs.scrollTop = 99999;
+  msgs.appendChild(div); msgs.scrollTop = 99999;
 }
 
 function setLoading(val) {
@@ -828,593 +1112,277 @@ function setLoading(val) {
   const ex = document.getElementById('typing-ind');
   if (val && !ex) {
     const t = document.createElement('div');
-    t.id = 'typing-ind'; t.className = 'msg ai';
-    t.innerHTML = '<div class="typing"><span></span><span></span><span></span></div>';
-    const msgs = document.getElementById('chat-msgs');
-    msgs.appendChild(t); msgs.scrollTop = 99999;
+    t.id='typing-ind'; t.className='msg ai';
+    t.innerHTML='<div class="typing"><span></span><span></span><span></span></div>';
+    const msgs=document.getElementById('chat-msgs');
+    msgs.appendChild(t); msgs.scrollTop=99999;
   } else if (!val && ex) { ex.remove(); }
 }
 
-document.getElementById('user-input').addEventListener('input', function() {
-  this.style.height = 'auto';
-  this.style.height = Math.min(this.scrollHeight,120)+'px';
-});
-document.getElementById('user-input').addEventListener('keydown', function(e) {
-  if (e.key==='Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
-});
+document.getElementById('user-input').addEventListener('input', function() { this.style.height='auto'; this.style.height=Math.min(this.scrollHeight,120)+'px'; });
+document.getElementById('user-input').addEventListener('keydown', function(e) { if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMessage();} });
 
 // ── Terminal ──────────────────────────────────────────────────────
-let termHistory = [];
-let termHistIdx = -1;
-let termCmdHistory = [];
+let termHistory=[], termHistIdx=-1, termCmdHistory=[];
 
 function initTerminal() {
   const input = document.getElementById('terminal-input');
   input.addEventListener('keydown', onTerminalKey);
-  termPrint('info', 'Pulso Terminal v1.0 — digite \x1b[33mhelp\x1b[0m para ver comandos');
-  termPrint('separator', '─'.repeat(42));
+  termPrint('output', '\x1b[32mPulso Terminal\x1b[0m — \x1b[90mhelp\x1b[0m para comandos\n');
 }
 
 function onTerminalKey(e) {
-  if (e.key === 'Enter') {
-    const cmd = e.target.value.trim();
-    e.target.value = '';
-    termHistIdx = -1;
+  if (e.key==='Enter') {
+    const cmd=e.target.value.trim(); e.target.value=''; termHistIdx=-1;
     if (!cmd) return;
-    termCmdHistory.unshift(cmd);
-    if (termCmdHistory.length > 50) termCmdHistory.pop();
-    termPrintPrompt(cmd);
-    runTerminalCmd(cmd);
+    termCmdHistory.unshift(cmd); if(termCmdHistory.length>50) termCmdHistory.pop();
+    termPrintPrompt(cmd); runTerminalCmd(cmd);
   }
-  if (e.key === 'ArrowUp') {
-    e.preventDefault();
-    if (termHistIdx < termCmdHistory.length - 1) {
-      termHistIdx++;
-      e.target.value = termCmdHistory[termHistIdx] || '';
-    }
-  }
-  if (e.key === 'ArrowDown') {
-    e.preventDefault();
-    if (termHistIdx > 0) { termHistIdx--; e.target.value = termCmdHistory[termHistIdx]; }
-    else { termHistIdx = -1; e.target.value = ''; }
-  }
-  if (e.key === 'Tab') {
-    e.preventDefault();
-    const val = e.target.value;
-    const cmds = ['help','clear','status','feed','emails','reply','wp','wp-auth','tasks','task','deploy'];
-    const match = cmds.find(c => c.startsWith(val));
-    if (match) e.target.value = match + ' ';
-  }
+  if (e.key==='ArrowUp') { e.preventDefault(); if(termHistIdx<termCmdHistory.length-1){termHistIdx++;e.target.value=termCmdHistory[termHistIdx]||'';} }
+  if (e.key==='ArrowDown') { e.preventDefault(); if(termHistIdx>0){termHistIdx--;e.target.value=termCmdHistory[termHistIdx];}else{termHistIdx=-1;e.target.value='';} }
+  if (e.key==='Tab') { e.preventDefault(); const v=e.target.value; const m=['help','clear','status','feed','emails','reply','wp','wp-auth','tasks','task','deploy'].find(c=>c.startsWith(v)); if(m)e.target.value=m+' '; }
 }
 
 async function runTerminalCmd(cmd) {
-  // Client-side: clear
-  if (cmd === 'clear') {
-    document.getElementById('terminal-output').innerHTML = '';
-    return;
-  }
-
+  if (cmd==='clear') { document.getElementById('terminal-output').innerHTML=''; return; }
   try {
-    const res = await fetch('/api/terminal', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ cmd, history: termHistory.slice(-6) })
-    });
-    const data = await res.json();
-    if (data.clear) { document.getElementById('terminal-output').innerHTML = ''; return; }
-    if (data.output) termPrint('output', data.output);
-    termHistory.push({ role: 'user', text: cmd });
-    if (data.output) termHistory.push({ role: 'model', text: data.output });
-  } catch(e) {
-    termPrint('error', 'Erro de conexão: ' + e.message);
-  }
-
-  termPrint('separator', '');
-  // Auto-scroll
-  const out = document.getElementById('terminal-output');
-  out.scrollTop = out.scrollHeight;
+    const res = await fetch('/api/terminal',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({cmd,history:termHistory.slice(-6)})});
+    const d = await res.json();
+    if (d.clear) { document.getElementById('terminal-output').innerHTML=''; return; }
+    if (d.output) termPrint('output', d.output);
+    termHistory.push({role:'user',text:cmd});
+    if (d.output) termHistory.push({role:'model',text:d.output});
+  } catch(e) { termPrint('output','\x1b[31mErro: '+e.message+'\x1b[0m'); }
+  termPrint('separator','');
+  document.getElementById('terminal-output').scrollTop=99999;
 }
 
 function termPrintPrompt(cmd) {
-  const out = document.getElementById('terminal-output');
-  const div = document.createElement('div');
-  div.className = 't-line';
-  div.innerHTML = `<span class="t-prompt">well@pulso:~$</span> <span class="t-cmd">${escHtml(cmd)}</span>`;
+  const out=document.getElementById('terminal-output');
+  const div=document.createElement('div'); div.className='t-line';
+  div.innerHTML=`<span class="t-prompt">well@pulso ~$</span> <span class="t-cmd">${escHtml(cmd)}</span>`;
   out.appendChild(div);
 }
 
 function termPrint(type, text) {
-  const out = document.getElementById('terminal-output');
-  if (type === 'separator' && !text) {
-    const div = document.createElement('div');
-    div.style.height = '4px';
-    out.appendChild(div);
-    return;
-  }
-  // Parse ANSI codes to HTML
-  const html = ansiToHtml(text);
-  const div = document.createElement('div');
-  div.className = 't-line t-' + type;
-  div.innerHTML = html;
-  out.appendChild(div);
-  out.scrollTop = out.scrollHeight;
+  const out=document.getElementById('terminal-output');
+  if (type==='separator'&&!text) { const d=document.createElement('div'); d.style.height='4px'; out.appendChild(d); return; }
+  const div=document.createElement('div'); div.className='t-line';
+  div.innerHTML=ansiToHtml(text); out.appendChild(div); out.scrollTop=out.scrollHeight;
 }
 
-function ansiToHtml(text) {
-  return escHtml(text)
-    .replace(/\x1b\[0m/g,  '</span>')
-    .replace(/\x1b\[32m/g, '<span style="color:#7ee787">')
-    .replace(/\x1b\[33m/g, '<span style="color:#e3b341">')
-    .replace(/\x1b\[31m/g, '<span style="color:#f85149">')
-    .replace(/\x1b\[36m/g, '<span style="color:#79c0ff">')
-    .replace(/\x1b\[37m/g, '<span style="color:#e6edf3">')
-    .replace(/\x1b\[90m/g, '<span style="color:#6e7681">')
-    .replace(/\x1b\[\d+m/g, '');
+function ansiToHtml(t) {
+  return escHtml(t)
+    .replace(/\x1b\[0m/g,'</span>').replace(/\x1b\[32m/g,'<span style="color:#7ca47a">')
+    .replace(/\x1b\[33m/g,'<span style="color:#c8a04a">').replace(/\x1b\[31m/g,'<span style="color:#c8604a">')
+    .replace(/\x1b\[36m/g,'<span style="color:#6fa8c0">').replace(/\x1b\[37m/g,'<span style="color:#cdd9e5">')
+    .replace(/\x1b\[90m/g,'<span style="color:#606060">').replace(/\x1b\[\d+m/g,'');
 }
 
-function escHtml(s) {
-  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-}
+function escHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
-// ── Plano de Ação IA ──────────────────────────────────────────────
+// ── Action Plan ───────────────────────────────────────────────────
 let lastPlan = '';
 
 async function loadActionPlan() {
   const el = document.getElementById('action-plan');
-  el.style.color = 'var(--muted)';
-  el.textContent = '⚡ Gerando plano com Gemini...';
+  el.className = ''; el.textContent = 'Gerando plano...';
   try {
-    // Busca dados brutos do servidor
-    const [dashRes, ctxRes] = await Promise.all([
-      fetch('/api/dashboard'),
-      fetch('/api/morning-context')
-    ]);
-    const dash = await dashRes.json();
-    const ctx  = await ctxRes.json();
-
+    const [dr, cr] = await Promise.all([fetch('/api/dashboard'), fetch('/api/morning-context')]);
+    const dash = await dr.json();
     const feed  = dash.feed  || [];
-    const tasks = (dash.tasks || []).filter(t => !t.done);
-
+    const tasks = (dash.tasks||[]).filter(t=>!t.done);
     const byType = {};
-    for (const e of feed.slice(0, 20)) {
-      if (!byType[e.type]) byType[e.type] = [];
-      byType[e.type].push(e.data);
-    }
-
-    const prompt = `${SYSTEM}
-
-## Dados dos sites agora
-${JSON.stringify(byType, null, 1)}
-
-## Tarefas pendentes (${tasks.length})
-${tasks.map(t => '- ' + t.text).join('\n') || 'Nenhuma'}
-
-## Instrução
-Gere um PLANO DE AÇÃO conciso. Formato:
-🔴 URGENTE (fazer hoje)
-🟡 IMPORTANTE (esta semana)
-🟢 MONITORAR
-💡 OPORTUNIDADE
-
-Máximo 10 itens. 1 linha cada.`;
-
-    const key = S.get('gemini_key');
-    const body = {
-      system_instruction: { parts: [{ text: '' }] },
-      contents: [{ role: 'user', parts: [{ text: prompt }] }],
-      generationConfig: { maxOutputTokens: 1024, temperature: 0.7 }
-    };
-    const res = await fetch(`${GEMINI_API}?key=${key}`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
-    });
-    const data = await res.json();
-    const plan = data.candidates?.[0]?.content?.parts?.[0]?.text || 'Sem dados suficientes para gerar plano.';
-
+    for (const e of feed.slice(0,20)) { if(!byType[e.type])byType[e.type]=[]; byType[e.type].push(e.data); }
+    const prompt = `${SYSTEM}\n\nDados dos sites:\n${JSON.stringify(byType,null,1)}\n\nTarefas (${tasks.length}):\n${tasks.map(t=>'- '+t.text).join('\n')||'Nenhuma'}\n\nGere PLANO DE AÇÃO:\n[URGENTE] fazer hoje\n[IMPORTANTE] esta semana\n[MONITORAR]\n[OPORTUNIDADE]\nMáx 10 itens, 1 linha cada.`;
+    const res = await fetch(`${GEMINI_API}?key=${S.get('gemini_key')}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{role:'user',parts:[{text:prompt}]}],generationConfig:{maxOutputTokens:800,temperature:0.7}})});
+    const d = await res.json();
+    const plan = d.candidates?.[0]?.content?.parts?.[0]?.text || 'Sem dados suficientes.';
     lastPlan = plan;
-    el.style.color = 'var(--text)';
+    el.className = 'loaded';
     el.innerHTML = plan
-      .replace(/🔴/g, '<span style="color:#f85149">🔴</span>')
-      .replace(/🟡/g, '<span style="color:#e3b341">🟡</span>')
-      .replace(/🟢/g, '<span style="color:#7ee787">🟢</span>')
-      .replace(/💡/g, '<span style="color:#79c0ff">💡</span>')
-      .replace(/\n/g, '<br/>');
-  } catch(e) {
-    el.textContent = 'Erro: ' + e.message;
-  }
+      .replace(/\[URGENTE\]/g,   '<span style="color:var(--red);font-weight:600">[URGENTE]</span>')
+      .replace(/\[IMPORTANTE\]/g,'<span style="color:var(--yellow);font-weight:600">[IMPORTANTE]</span>')
+      .replace(/\[MONITORAR\]/g, '<span style="color:var(--sage);font-weight:600">[MONITORAR]</span>')
+      .replace(/\[OPORTUNIDADE\]/g,'<span style="color:var(--accent);font-weight:600">[OPORTUNIDADE]</span>')
+      .replace(/\n/g,'<br/>');
+  } catch(e) { el.textContent='Erro: '+e.message; }
 }
 
-// Auto-gera briefing quando app abre via push (?briefing=1)
 async function autoMorningBriefing() {
-  const el = document.getElementById('action-plan');
-  el.textContent = '⚡ Gerando briefing matinal...';
   await loadActionPlan();
-  if (lastPlan) speakBriefing(lastPlan.split('\n').slice(0, 4).join('. '));
+  if (lastPlan) speakBriefing(lastPlan.split('\n').slice(0,4).join('. '));
 }
 
-// ── Voz (Web Speech API — nativo Android/Chrome, grátis) ──────────
+// ── Voice TTS ─────────────────────────────────────────────────────
 let isSpeaking = false;
 
 function speakPlan() {
-  if (!lastPlan) { speak('Nenhum plano gerado ainda. Clique em gerar primeiro.'); return; }
-  // Remove emojis e formata para fala
-  const text = lastPlan.replace(/[🔴🟡🟢💡⚡📢⏰🏆✅📧💰👤🔒]/g, '').replace(/\n/g, '. ');
-  speak(text);
+  if (!lastPlan) { speak('Nenhum plano gerado. Toque em gerar primeiro.'); return; }
+  speak(lastPlan.replace(/\[(URGENTE|IMPORTANTE|MONITORAR|OPORTUNIDADE)\]/g,'$1').replace(/\n/g,'. '));
 }
 
 function speak(text) {
-  if (!('speechSynthesis' in window)) { alert('Voz não suportada neste browser.'); return; }
-
+  if (!('speechSynthesis' in window)) return;
   window.speechSynthesis.cancel();
-  if (isSpeaking) { isSpeaking = false; document.getElementById('speak-btn').textContent = '🔊'; return; }
-
+  if (isSpeaking) { isSpeaking=false; updateSpeakBtn(false); return; }
   const utt = new SpeechSynthesisUtterance(text);
-  utt.lang = 'pt-BR';
-  utt.rate = 1.05;
-  utt.pitch = 1.0;
-
-  // Prefere voz feminina em pt-BR se disponível
-  const voices = window.speechSynthesis.getVoices();
-  const ptVoice = voices.find(v => v.lang === 'pt-BR' && v.name.includes('Female'))
-               || voices.find(v => v.lang === 'pt-BR')
-               || voices.find(v => v.lang.startsWith('pt'));
-  if (ptVoice) utt.voice = ptVoice;
-
-  utt.onstart  = () => { isSpeaking = true;  document.getElementById('speak-btn').textContent = '⏹'; };
-  utt.onend    = () => { isSpeaking = false; document.getElementById('speak-btn').textContent = '🔊'; };
-  utt.onerror  = () => { isSpeaking = false; document.getElementById('speak-btn').textContent = '🔊'; };
-
+  utt.lang='pt-BR'; utt.rate=1.05;
+  const voices=window.speechSynthesis.getVoices();
+  const v=voices.find(v=>v.lang==='pt-BR'&&v.name.includes('Female'))||voices.find(v=>v.lang==='pt-BR')||voices.find(v=>v.lang.startsWith('pt'));
+  if (v) utt.voice=v;
+  utt.onstart=()=>{isSpeaking=true;updateSpeakBtn(true);};
+  utt.onend=utt.onerror=()=>{isSpeaking=false;updateSpeakBtn(false);};
   window.speechSynthesis.speak(utt);
 }
 
-// Fala o briefing matinal automaticamente quando notificação push abre o app
-function speakBriefing(text) {
-  setTimeout(() => speak(text), 800); // pequeno delay para o app carregar
+function updateSpeakBtn(active) {
+  const btn = document.getElementById('speak-btn');
+  btn.innerHTML = active
+    ? '<svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.5;stroke-linecap:round"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>'
+    : '<svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.5;stroke-linecap:round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>';
 }
 
-// ── Câmera → Gemini Vision ────────────────────────────────────────
-let pendingImageB64 = null;
-let pendingImageMime = null;
+function speakBriefing(text) { setTimeout(()=>speak(text), 800); }
 
-function openCamera() {
-  document.getElementById('camera-input').click();
-}
+// ── Camera ────────────────────────────────────────────────────────
+let pendingImageB64=null, pendingImageMime=null;
+
+function openCamera() { document.getElementById('camera-input').click(); }
 
 function handlePhoto(input) {
-  const file = input.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    const dataUrl = e.target.result;
-    const [meta, b64] = dataUrl.split(',');
-    pendingImageB64 = b64;
-    pendingImageMime = file.type || 'image/jpeg';
-
-    // Mostra preview no chat
-    const div = document.createElement('div');
-    div.className = 'msg user';
-    div.style.maxWidth = '220px';
-    div.innerHTML = `<img src="${dataUrl}" class="img-preview"/><div style="font-size:12px;color:#ccc;margin-top:4px">📷 Foto enviada</div>`;
+  const file=input.files[0]; if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const [,b64]=e.target.result.split(',');
+    pendingImageB64=b64; pendingImageMime=file.type||'image/jpeg';
+    const div=document.createElement('div'); div.className='msg user'; div.style.maxWidth='220px';
+    div.innerHTML=`<img src="${e.target.result}" class="img-preview"/><div style="font-size:11px;color:var(--text2);margin-top:4px">Foto enviada</div>`;
     document.getElementById('chat-msgs').appendChild(div);
-    document.getElementById('chat-msgs').scrollTop = 99999;
-
-    // Se não tiver texto pendente, envia automaticamente
-    const inputEl = document.getElementById('user-input');
-    if (!inputEl.value.trim()) {
-      sendMessageWithImage('Analise esta imagem e me diga o que vê. Seja direto e útil.');
-    }
-    input.value = '';
+    document.getElementById('chat-msgs').scrollTop=99999;
+    if (!document.getElementById('user-input').value.trim()) sendMessageWithImage('Analise esta imagem.');
+    input.value='';
   };
   reader.readAsDataURL(file);
 }
 
 async function sendMessageWithImage(text) {
   if (!pendingImageB64) return;
-  const b64 = pendingImageB64;
-  const mime = pendingImageMime;
-  pendingImageB64 = null;
-  pendingImageMime = null;
-
-  chatMessages.push({ role: 'user', content: `[imagem enviada] ${text}` });
-  setLoading(true);
-
+  const b64=pendingImageB64, mime=pendingImageMime;
+  pendingImageB64=pendingImageMime=null;
+  chatMessages.push({role:'user',content:'[imagem] '+text}); setLoading(true);
   try {
-    const key = S.get('gemini_key');
-    const body = {
-      system_instruction: { parts: [{ text: SYSTEM }] },
-      contents: [{
-        role: 'user',
-        parts: [
-          { inline_data: { mime_type: mime, data: b64 } },
-          { text }
-        ]
-      }],
-      generationConfig: { maxOutputTokens: 1024 }
-    };
-    const res = await fetch(`${GEMINI_API}?key=${key}`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
-    });
-    const data = await res.json();
-    const reply = data.candidates?.[0]?.content?.parts?.[0]?.text || '(sem resposta)';
-    chatMessages.push({ role: 'assistant', content: reply });
-    addMsg('ai', reply);
-  } catch(e) {
-    addMsg('ai', `Erro: ${e.message}`);
-  } finally {
-    setLoading(false);
-  }
+    const res=await fetch(`${GEMINI_API}?key=${S.get('gemini_key')}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({system_instruction:{parts:[{text:SYSTEM}]},contents:[{role:'user',parts:[{inline_data:{mime_type:mime,data:b64}},{text}]}],generationConfig:{maxOutputTokens:1024}})});
+    const d=await res.json();
+    const reply=d.candidates?.[0]?.content?.parts?.[0]?.text||'(sem resposta)';
+    chatMessages.push({role:'assistant',content:reply}); addMsg('ai',reply);
+  } catch(e){addMsg('ai','Erro: '+e.message);}finally{setLoading(false);}
 }
 
-// Intercepta sendMessage para incluir imagem pendente se houver
-const _origSend = sendMessage;
-sendMessage = async function() {
-  if (pendingImageB64) {
-    const text = document.getElementById('user-input').value.trim() || 'Analise esta imagem.';
-    document.getElementById('user-input').value = '';
-    addMsg('user', text);
-    await sendMessageWithImage(text);
-    return;
-  }
-  _origSend();
+const _orig=sendMessage;
+sendMessage=async function(){
+  if(pendingImageB64){const t=document.getElementById('user-input').value.trim()||'Analise esta imagem.';document.getElementById('user-input').value='';addMsg('user',t);await sendMessageWithImage(t);return;}
+  _orig();
 };
 
-// ── Service Worker ────────────────────────────────────────────────
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/sw.js').catch(() => {});
-}
-
-// ── Dia Tab ───────────────────────────────────────────────────────
-const VAPID_PUBLIC = 'BH6q5lb8vcCBGxvnDIJIgYd2eHPLd3LxW3RKd1fjmkqbG2p3a6eNDOxkJvLTUcy1YBKs2kFgfpKX7uSu61B24Zw';
-
-function initDia() {
-  const now = new Date();
-  const h = now.getHours();
-  const greeting = h < 12 ? 'Bom dia' : h < 18 ? 'Boa tarde' : 'Boa noite';
-  document.getElementById('dia-greeting').innerHTML = `${greeting}, <span>Well</span> 👋`;
-  document.getElementById('dia-date').textContent = now.toLocaleDateString('pt-BR', {weekday:'long', day:'numeric', month:'long'});
-
-  loadTasks();
-  loadFeed();
-  renderEnergy();
-
-  // Push toggle state
-  const pushOn = S.get('push_enabled') === '1';
-  const t = document.getElementById('push-toggle');
-  if (pushOn) t.classList.add('on');
-}
-
 // ── Tasks ─────────────────────────────────────────────────────────
-let tasks = [];
+let tasks=[];
 
 function loadTasks() {
-  tasks = S.get('tasks') || [];
-  // Reset done tasks at midnight
-  const lastReset = S.get('tasks_reset_date');
-  const today = new Date().toDateString();
-  if (lastReset !== today) {
-    tasks = tasks.filter(t => !t.done);
-    S.set('tasks_reset_date', today);
-    saveTasks();
-  }
+  tasks=S.get('tasks')||[];
+  const today=new Date().toDateString();
+  if(S.get('tasks_reset_date')!==today){tasks=tasks.filter(t=>!t.done);S.set('tasks_reset_date',today);saveTasks();}
   renderTasks();
 }
 
 function renderTasks() {
-  const list = document.getElementById('task-list');
-  if (!tasks.length) {
-    list.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:8px 0">Nenhuma tarefa — adicione abaixo</div>';
-    return;
-  }
-  list.innerHTML = tasks.map((t, i) => `
-    <div class="task-item">
-      <div class="task-check ${t.done ? 'done' : ''}" onclick="toggleTask(${i})">${t.done ? '✓' : ''}</div>
-      <div class="task-text ${t.done ? 'done' : ''}">${t.text}</div>
-      <div class="task-del" onclick="deleteTask(${i})">×</div>
-    </div>
-  `).join('');
+  const list=document.getElementById('task-list');
+  if(!tasks.length){list.innerHTML='<div style="padding:12px 18px;color:var(--muted);font-size:13px;border-bottom:1px solid var(--border)">Sem tarefas — adicione abaixo</div>';return;}
+  list.innerHTML=tasks.map((t,i)=>`<div class="task-item"><div class="task-check ${t.done?'done':''}" onclick="toggleTask(${i})">${t.done?'<svg style="width:11px;height:11px;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>':''}</div><div class="task-text ${t.done?'done':''}">${t.text}</div><div class="task-del" onclick="deleteTask(${i})"><svg style="width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.5;stroke-linecap:round" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div></div>`).join('');
 }
 
-function addTask() {
-  const input = document.getElementById('task-input');
-  const text = input.value.trim();
-  if (!text) return;
-  tasks.push({ text, done: false, created: Date.now() });
-  input.value = '';
-  saveTasks();
-  renderTasks();
+function addTask(){const input=document.getElementById('task-input');const text=input.value.trim();if(!text)return;tasks.push({text,done:false,created:Date.now()});input.value='';saveTasks();renderTasks();}
+function toggleTask(i){tasks[i].done=!tasks[i].done;saveTasks();renderTasks();}
+function deleteTask(i){tasks.splice(i,1);saveTasks();renderTasks();}
+function saveTasks(){S.set('tasks',tasks);fetch('/api/tasks',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({tasks})}).catch(()=>{});}
+
+// ── Energy ────────────────────────────────────────────────────────
+function setEnergy(val){S.set('energy_today',{val,date:new Date().toDateString()});renderEnergy();}
+function renderEnergy(){const s=S.get('energy_today');const today=new Date().toDateString();const val=(s?.date===today)?s.val:0;document.querySelectorAll('.energy-dot').forEach((b,i)=>b.classList.toggle('sel',i+1===val));}
+
+// ── Pomodoro ──────────────────────────────────────────────────────
+let pomoInterval=null,pomoSeconds=25*60,pomoIsBreak=false,pomoRunning=false;
+const POMO_TOTAL=25*60, BREAK_TOTAL=5*60;
+
+function updatePomoDisplay(){
+  const m=Math.floor(pomoSeconds/60).toString().padStart(2,'0');
+  const s=(pomoSeconds%60).toString().padStart(2,'0');
+  document.getElementById('pomo-timer').textContent=`${m}:${s}`;
+  // Update ring
+  const total=pomoIsBreak?BREAK_TOTAL:POMO_TOTAL;
+  const pct=pomoSeconds/total;
+  const circ=175.9;
+  document.getElementById('pomo-circle').style.strokeDashoffset=circ*(1-pct);
 }
 
-function toggleTask(i) {
-  tasks[i].done = !tasks[i].done;
-  saveTasks();
-  renderTasks();
+function pomodoroToggle(){
+  if(pomoRunning){clearInterval(pomoInterval);pomoRunning=false;const btn=document.getElementById('pomo-start');btn.innerHTML='<svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>Iniciar';}
+  else{pomoRunning=true;const btn=document.getElementById('pomo-start');btn.innerHTML='<svg viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>Pausar';pomoInterval=setInterval(()=>{pomoSeconds--;if(pomoSeconds<=0)pomodoroFinish();updatePomoDisplay();},1000);}
 }
 
-function deleteTask(i) {
-  tasks.splice(i, 1);
-  saveTasks();
-  renderTasks();
+function pomodoroReset(){clearInterval(pomoInterval);pomoRunning=false;pomoIsBreak=false;pomoSeconds=POMO_TOTAL;document.getElementById('pomo-start').innerHTML='<svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>Iniciar';document.getElementById('pomo-label').textContent='Foco';updatePomoDisplay();}
+
+function pomodoroSkip(){clearInterval(pomoInterval);pomoRunning=false;pomoIsBreak=!pomoIsBreak;pomoSeconds=pomoIsBreak?BREAK_TOTAL:POMO_TOTAL;document.getElementById('pomo-label').textContent=pomoIsBreak?'Pausa':'Foco';document.getElementById('pomo-start').innerHTML='<svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>Iniciar';updatePomoDisplay();}
+
+function pomodoroFinish(){clearInterval(pomoInterval);pomoRunning=false;if(Notification.permission==='granted'){new Notification(pomoIsBreak?'Pausa encerrada':'Foco completo',{body:pomoIsBreak?'Hora de focar.':'Descanse 5 minutos.',icon:'/icons/icon-192.svg'});}pomodoroSkip();}
+
+// ── Feed ──────────────────────────────────────────────────────────
+async function loadFeed(){
+  const el=document.getElementById('site-feed');
+  try{
+    const res=await fetch('/api/dashboard');
+    const d=await res.json();
+    if(!d.feed?.length){el.innerHTML='<div class="feed-item"><div class="feed-dot"></div><div class="feed-body"><div class="feed-text" style="color:var(--muted)">Nenhuma atualização ainda</div></div><div></div></div>';return;}
+    const urgent=['prazo_vencendo','resultado_pendente','new_order','email_received'];
+    el.innerHTML=d.feed.slice(0,8).map(e=>`<div class="feed-item"><div class="feed-dot${urgent.includes(e.type)?' urgent':''}"></div><div class="feed-body"><div class="feed-site">${e.site}</div><div class="feed-text">${e.data?.title||e.type}</div></div><div class="feed-time">${timeAgo(e.timestamp)}</div></div>`).join('');
+  }catch{el.innerHTML='<div class="feed-item"><div class="feed-dot"></div><div class="feed-body"><div class="feed-text" style="color:var(--muted)">Sites não configurados</div></div><div></div></div>';}
 }
 
-function saveTasks() {
-  S.set('tasks', tasks);
-  // Sync para o Worker (melhor esforço)
-  fetch('/api/tasks', {
-    method: 'POST',
-    headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({ tasks })
-  }).catch(() => {});
+function timeAgo(ts){const d=Date.now()-ts;if(d<3600000)return Math.floor(d/60000)+'m';if(d<86400000)return Math.floor(d/3600000)+'h';return Math.floor(d/86400000)+'d';}
+
+// ── Push ──────────────────────────────────────────────────────────
+async function togglePush(){
+  const t=document.getElementById('push-toggle');
+  if(S.get('push_enabled')==='1'){t.classList.remove('on');S.set('push_enabled','0');document.getElementById('push-status').textContent='Notificações desativadas.';}
+  else{await enablePush();}
 }
 
-// ── Energia ────────────────────────────────────────────────────────
-function setEnergy(val) {
-  S.set('energy_today', { val, date: new Date().toDateString() });
-  renderEnergy();
+async function enablePush(){
+  const t=document.getElementById('push-toggle');const st=document.getElementById('push-status');
+  try{
+    if(await Notification.requestPermission()!=='granted'){st.textContent='Permissão negada.';return;}
+    const reg=await navigator.serviceWorker.ready;
+    const sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:urlBase64ToUint8Array(VAPID_PUBLIC)});
+    await fetch('/api/subscribe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({subscription:sub.toJSON()})});
+    S.set('push_enabled','1');t.classList.add('on');
+    st.textContent='Briefing matinal às '+(S.get('alarm_time')||'07:30')+'.';
+  }catch(e){st.textContent='Erro: '+e.message;}
 }
 
-function renderEnergy() {
-  const saved = S.get('energy_today');
-  const today = new Date().toDateString();
-  const val = (saved?.date === today) ? saved.val : 0;
-  document.querySelectorAll('.energy-btn').forEach((btn, i) => {
-    btn.classList.toggle('sel', i + 1 === val);
-  });
-}
+function saveAlarm(){S.set('alarm_time',document.getElementById('alarm-time').value);}
 
-// ── Pomodoro ────────────────────────────────────────────────────────
-let pomoInterval = null;
-let pomoSeconds = 25 * 60;
-let pomoIsBreak = false;
-let pomoRunning = false;
+function urlBase64ToUint8Array(b){const p='='.repeat((4-b.length%4)%4);const s=(b+p).replace(/-/g,'+').replace(/_/g,'/');const r=atob(s);return Uint8Array.from([...r].map(c=>c.charCodeAt(0)));}
 
-function pomodoroToggle() {
-  if (pomoRunning) {
-    clearInterval(pomoInterval);
-    pomoRunning = false;
-    document.getElementById('pomo-start').textContent = '▶ Continuar';
-  } else {
-    pomoRunning = true;
-    document.getElementById('pomo-start').textContent = '⏸ Pausar';
-    pomoInterval = setInterval(() => {
-      pomoSeconds--;
-      if (pomoSeconds <= 0) pomodoroFinish();
-      updatePomoDisplay();
-    }, 1000);
-  }
-}
+// ── Service Worker ────────────────────────────────────────────────
+if('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(()=>{});
 
-function pomodoroReset() {
-  clearInterval(pomoInterval);
-  pomoRunning = false;
-  pomoIsBreak = false;
-  pomoSeconds = 25 * 60;
-  document.getElementById('pomo-start').textContent = '▶ Iniciar';
-  document.getElementById('pomo-label').textContent = 'FOCO';
-  updatePomoDisplay();
-}
-
-function pomodoroSkip() {
-  clearInterval(pomoInterval);
-  pomoRunning = false;
-  pomoIsBreak = !pomoIsBreak;
-  pomoSeconds = pomoIsBreak ? 5 * 60 : 25 * 60;
-  document.getElementById('pomo-label').textContent = pomoIsBreak ? 'PAUSA' : 'FOCO';
-  document.getElementById('pomo-start').textContent = '▶ Iniciar';
-  updatePomoDisplay();
-}
-
-function pomodoroFinish() {
-  clearInterval(pomoInterval);
-  pomoRunning = false;
-  if (Notification.permission === 'granted') {
-    new Notification(pomoIsBreak ? '☕ Pausa acabou!' : '✅ Pomodoro completo!', {
-      body: pomoIsBreak ? 'Hora de focar.' : 'Descanse 5 minutos.',
-      icon: '/icons/icon-192.svg'
-    });
-  }
-  pomodoroSkip();
-}
-
-function updatePomoDisplay() {
-  const m = Math.floor(pomoSeconds / 60).toString().padStart(2, '0');
-  const s = (pomoSeconds % 60).toString().padStart(2, '0');
-  document.getElementById('pomo-timer').textContent = `${m}:${s}`;
-}
-
-// ── Site Feed ──────────────────────────────────────────────────────
-async function loadFeed() {
-  const el = document.getElementById('site-feed');
-  try {
-    const res = await fetch('/api/dashboard');
-    const data = await res.json();
-    if (!data.feed?.length) {
-      el.innerHTML = '<div style="color:var(--muted);font-size:13px">Nenhuma atualização dos sites ainda.</div>';
-      return;
-    }
-    el.innerHTML = data.feed.slice(0, 8).map(e => `
-      <div class="feed-item">
-        <div class="fi-site">${e.site}</div>
-        <div class="fi-text">${e.data?.title || e.type}</div>
-        <div class="fi-time">${timeAgo(e.timestamp)}</div>
-      </div>
-    `).join('');
-  } catch {
-    el.innerHTML = '<div style="color:var(--muted);font-size:13px">Sites ainda não configurados.</div>';
-  }
-}
-
-function timeAgo(ts) {
-  const diff = Date.now() - ts;
-  if (diff < 3600000) return Math.floor(diff / 60000) + ' min atrás';
-  if (diff < 86400000) return Math.floor(diff / 3600000) + 'h atrás';
-  return Math.floor(diff / 86400000) + 'd atrás';
-}
-
-// ── Push Notifications ─────────────────────────────────────────────
-async function togglePush() {
-  const t = document.getElementById('push-toggle');
-  const enabled = S.get('push_enabled') === '1';
-  if (enabled) {
-    t.classList.remove('on');
-    S.set('push_enabled', '0');
-    document.getElementById('push-status').textContent = 'Notificações desativadas.';
-  } else {
-    await enablePush();
-  }
-}
-
-async function enablePush() {
-  const t = document.getElementById('push-toggle');
-  const status = document.getElementById('push-status');
-  try {
-    const perm = await Notification.requestPermission();
-    if (perm !== 'granted') { status.textContent = '⚠️ Permissão negada.'; return; }
-
-    const reg = await navigator.serviceWorker.ready;
-    const sub = await reg.pushManager.subscribe({
-      userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC)
-    });
-
-    await fetch('/api/subscribe', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ subscription: sub.toJSON() })
-    });
-
-    S.set('push_enabled', '1');
-    t.classList.add('on');
-    status.textContent = '✅ Vai receber o briefing matinal às ' + (S.get('alarm_time') || '07:30') + '.';
-  } catch(e) {
-    status.textContent = 'Erro: ' + e.message;
-  }
-}
-
-function saveAlarm() {
-  S.set('alarm_time', document.getElementById('alarm-time').value);
-}
-
-function urlBase64ToUint8Array(base64String) {
-  const padding = '='.repeat((4 - base64String.length % 4) % 4);
-  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
-  const rawData = atob(base64);
-  return Uint8Array.from([...rawData].map(c => c.charCodeAt(0)));
-}
-
+// ── Entry point ───────────────────────────────────────────────────
 handleOAuthRedirect();
-
-// Entry point
-if (S.get('pulso_auth') === '1') {
-  document.getElementById('login').style.display = 'none';
-  if (!S.get('gemini_key'))      S.set('gemini_key', DEFAULT_GEMINI_KEY);
-  if (!S.get('yt_api_key'))      S.set('yt_api_key', DEFAULT_YT_KEY);
-  if (!S.get('google_client_id'))S.set('google_client_id', DEFAULT_GOOGLE_CID);
-  init();
-  initDia();
-  initTerminal();
-  if (location.search.includes('tab=dia')) showTab('dia');
-  if (location.search.includes('tab=terminal')) showTab('terminal');
-  if (location.search.includes('briefing=1')) { showTab('dia'); autoMorningBriefing(); }
-  if (location.search.includes('report=1'))   { showTab('dia'); loadActionPlan(); }
+if(S.get('pulso_auth')==='1'){
+  if(!S.get('gemini_key'))       S.set('gemini_key',DEFAULT_GEMINI_KEY);
+  if(!S.get('yt_api_key'))       S.set('yt_api_key',DEFAULT_YT_KEY);
+  if(!S.get('google_client_id')) S.set('google_client_id',DEFAULT_GOOGLE_CID);
+  boot();
 }
 </script>
 </body>
