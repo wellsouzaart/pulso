@@ -136,13 +136,24 @@ async function handlePulseUpdate(request, env) {
   // Mantém só os últimos 50 eventos
   await env.PULSO_KV.put('site_feed', JSON.stringify(feed.slice(0, 50)));
 
-  // Notificação imediata para eventos importantes
-  const urgent = ['new_concurso', 'new_order', 'resultado_pending'];
-  if (urgent.includes(type)) {
+  // Notificação push imediata para eventos urgentes
+  const pushConfig = {
+    new_concurso:       { emoji: '📢', urgent: false },
+    prazo_vencendo:     { emoji: '⏰', urgent: true  },
+    resultado_pendente: { emoji: '🏆', urgent: true  },
+    concurso_encerrado: { emoji: '🔒', urgent: false },
+    resultado_publicado:{ emoji: '✅', urgent: false },
+    new_order:          { emoji: '💰', urgent: true  },
+    new_contact:        { emoji: '👤', urgent: false },
+    email_received:     { emoji: '📧', urgent: true  },
+  };
+
+  const cfg = pushConfig[type];
+  if (cfg?.urgent) {
     await sendPush(env, {
-      title: siteLabels[site] || site,
+      title: `${cfg.emoji} ${siteLabels[site] || site}`,
       body: eventLabel(type, data),
-      url: '/'
+      url: '/?tab=dia'
     });
   }
 
@@ -577,13 +588,19 @@ const siteLabels = {
 
 function eventLabel(type, data) {
   const map = {
-    new_concurso: () => `Novo concurso: ${data?.title || ''}`,
-    prazo_ending: () => `Prazo em ${data?.days || '?'} dias: ${data?.title || ''}`,
-    resultado_pending: () => `Resultado pendente: ${data?.title || ''}`,
-    new_order: () => `Novo pedido: ${data?.product || ''} — R$${data?.value || ''}`,
-    email_stats: () => `Email: ${data?.sent || 0} enviados, ${data?.open_rate || 0}% abertura`,
-    new_contact: () => `Novo contato: ${data?.name || data?.email || ''}`,
-    calendar_event: () => `Evento: ${data?.title || ''}`
+    new_concurso:        () => `Novo: ${data?.title || ''} ${data?.prazo ? '— '+data.prazo : ''}`,
+    prazo_vencendo:      () => `⏰ ${data?.dias}d: ${data?.title || ''} (${data?.prazo || ''})`,
+    prazo_ending:        () => `Prazo em ${data?.days || '?'} dias: ${data?.title || ''}`,
+    concurso_encerrado:  () => `Encerrado: ${data?.title || ''}`,
+    resultado_pendente:  () => `🏆 Resultado pendente há ${data?.dias_aguardando || '?'}d: ${data?.title || ''}`,
+    resultado_publicado: () => `✅ Resultado: ${data?.title || ''}`,
+    new_order:           () => `Pedido: ${data?.product || ''} — R$${data?.value || ''}`,
+    email_stats:         () => `Email: ${data?.sent || 0} enviados, ${data?.open_rate || 0}% abertura`,
+    new_contact:         () => `Novo contato: ${data?.name || data?.email || ''}`,
+    email_received:      () => `📧 De: ${data?.from || ''} — ${data?.subject || ''}`,
+    daily_summary:       () => `${data?.abertos || 0} abertos, ${data?.aguardando || 0} aguardando, ${data?.novos_hoje || 0} novos hoje`,
+    calendar_event:      () => `Evento: ${data?.title || ''}`,
+    test:                () => `Teste: ${data?.msg || ''}`,
   };
   return (map[type] || (() => type))();
 }
