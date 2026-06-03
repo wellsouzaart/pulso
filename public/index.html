@@ -245,6 +245,8 @@ const S = {
 };
 
 // ── Constants ────────────────────────────────────────────────────
+const DEFAULT_GEMINI_KEY = 'AIzaSyDcbvEGd5-YW3cP-J8cZiIDMDoFAnx3RpI';
+const DEFAULT_YT_KEY     = 'AIzaSyDcbvEGd5-YW3cP-J8cZiIDMDoFAnx3RpI';
 const GEMINI_MODEL = 'gemini-2.0-flash';
 const GEMINI_API = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
 const YT_API = 'https://www.googleapis.com/youtube/v3';
@@ -282,12 +284,10 @@ async function doLogin() {
   const hash = await hashPassword(pass);
   if (hash === PASSWORD_HASH) {
     S.set('pulso_auth', '1');
+    if (!S.get('gemini_key')) S.set('gemini_key', DEFAULT_GEMINI_KEY);
+    if (!S.get('yt_api_key')) S.set('yt_api_key', DEFAULT_YT_KEY);
     document.getElementById('login').style.display = 'none';
-    if (!S.get('gemini_key')) {
-      document.getElementById('setup').style.display = 'flex';
-    } else {
-      init();
-    }
+    init();
   } else {
     err.style.display = 'block';
     btn.textContent = 'Entrar'; btn.disabled = false;
@@ -686,11 +686,10 @@ handleOAuthRedirect();
 // Entry point
 if (S.get('pulso_auth') === '1') {
   document.getElementById('login').style.display = 'none';
-  if (!S.get('gemini_key')) {
-    document.getElementById('setup').style.display = 'flex';
-  } else {
-    init();
-  }
+  // Pre-fill defaults so setup screen is never needed
+  if (!S.get('gemini_key')) S.set('gemini_key', DEFAULT_GEMINI_KEY);
+  if (!S.get('yt_api_key')) S.set('yt_api_key', DEFAULT_YT_KEY);
+  init();
 }
 </script>
 </body>
