@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"><title>Pulso — conectando Spotify...</title>
+<style>body{background:#0a0a0a;color:#f0f0f0;font-family:-apple-system,sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;flex-direction:column;gap:16px;}
+.spinner{width:32px;height:32px;border:3px solid #222;border-top-color:#1DB954;border-radius:50%;animation:spin 0.8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}</style>
+</head>
+<body>
+<div class="spinner"></div>
+<p id="msg">Conectando Spotify...</p>
+<script>
+(async () => {
+  const params = new URLSearchParams(window.location.search);
+  const code = params.get('code');
+  const error = params.get('error');
+
+  if (error) {
+    document.getElementById('msg').textContent = 'Erro: ' + error;
+    setTimeout(() => window.location.href = '/', 2000);
+    return;
+  }
+
+  if (!code) {
+    document.getElementById('msg').textContent = 'Código não encontrado.';
+    setTimeout(() => window.location.href = '/', 2000);
+    return;
+  }
+
+  const verifier = localStorage.getItem('spotify_code_verifier');
+  const clientId = localStorage.getItem('spotify_client_id') || 'b0f6f8567ca74d2bb988f3e45fe99f8c';
+  const redirectUri = window.location.origin + '/spotify/callback/';
+
+  try {
+    const res = await fetch('https://accounts.spotify.com/api/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        grant_type: 'authorization_code',
+        code,
+        redirect_uri: redirectUri,
+        client_id: clientId,
+        code_verifier: verifier
+      })
+    });
+    const data = await res.json();
+    if (data.access_token) {
+      localStorage.setItem('spotify_token', data.access_token);
+      localStorage.setItem('spotify_refresh_token', data.refresh_token || '');
+      localStorage.setItem('spotify_token_expires', Date.now() + (data.expires_in * 1000));
+      document.getElementById('msg').textContent = '✅ Spotify conectado!';
+    } else {
+      document.getElementById('msg').textContent = 'Erro ao obter token: ' + (data.error_description || JSON.stringify(data));
+    }
+  } catch(e) {
+    document.getElementById('msg').textContent = 'Erro: ' + e.message;
+  }
+  setTimeout(() => window.location.href = '/', 1500);
+})();
+</script>
+</body>
+</html>

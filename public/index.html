@@ -1,196 +1,258 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="theme-color" content="#0a0a0a" />
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <meta name="theme-color" content="#0a0a0a"/>
   <title>Pulso</title>
-  <link rel="manifest" href="/manifest.json" />
-  <link rel="apple-touch-icon" href="/icons/icon-192.svg" />
+  <link rel="manifest" href="/manifest.json"/>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    :root {
-      --bg: #0a0a0a; --surface: #141414; --border: #222;
-      --accent: #7c6af7; --accent-dim: #3d3580;
-      --text: #f0f0f0; --muted: #666;
-      --safe-top: env(safe-area-inset-top, 0px);
-      --safe-bottom: env(safe-area-inset-bottom, 0px);
-    }
-    body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; height: 100dvh; display: flex; flex-direction: column; overflow: hidden; }
+  *{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --bg:#0a0a0a;--surface:#141414;--border:#222;
+    --accent:#7c6af7;--accent-dim:#3d3580;
+    --green:#1DB954;--text:#f0f0f0;--muted:#666;
+    --safe-top:env(safe-area-inset-top,0px);
+    --safe-bottom:env(safe-area-inset-bottom,0px);
+  }
+  body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;height:100dvh;display:flex;flex-direction:column;overflow:hidden}
 
-    header { padding: calc(var(--safe-top) + 12px) 16px 12px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; gap: 8px; }
-    .logo { font-size: 20px; font-weight: 800; color: var(--accent); letter-spacing: -0.5px; flex-shrink: 0; }
-    .logo span { color: var(--text); }
+  /* ── HEADER ── */
+  header{padding:calc(var(--safe-top) + 10px) 14px 10px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;flex-shrink:0}
+  .logo{font-size:20px;font-weight:800;color:var(--accent);letter-spacing:-0.5px;flex-shrink:0}
+  .logo span{color:var(--text)}
+  .pills{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;flex:1}
+  .pills::-webkit-scrollbar{display:none}
+  .pill{font-size:11px;padding:4px 9px;border-radius:20px;border:1px solid var(--border);color:var(--muted);white-space:nowrap;cursor:pointer;transition:all .15s;flex-shrink:0}
+  .pill.on{border-color:#2d6a4f;color:var(--green);background:#0d2318}
+  .pill.active{border-color:var(--accent);color:var(--accent);background:#1a1630}
 
-    /* Connected APIs pills */
-    .apis { display: flex; gap: 6px; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
-    .apis::-webkit-scrollbar { display: none; }
-    .api-pill { font-size: 10px; padding: 3px 8px; border-radius: 20px; border: 1px solid var(--border); color: var(--muted); white-space: nowrap; cursor: pointer; transition: all 0.15s; }
-    .api-pill.connected { border-color: #2d6a4f; color: #52b788; background: #0d2318; }
-    .api-pill.active { border-color: var(--accent); color: var(--accent); background: #1a1630; }
+  /* ── TABS ── */
+  .tabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0}
+  .tab{flex:1;padding:10px;font-size:13px;color:var(--muted);text-align:center;cursor:pointer;border-bottom:2px solid transparent;transition:all .15s}
+  .tab.active{color:var(--accent);border-bottom-color:var(--accent)}
 
-    #messages { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 14px; scroll-behavior: smooth; }
-    .msg { max-width: 90%; line-height: 1.55; font-size: 15px; animation: fadeUp 0.2s ease; }
-    @keyframes fadeUp { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
-    .msg.user { align-self: flex-end; background: var(--accent-dim); border-radius: 18px 18px 4px 18px; padding: 10px 14px; }
-    .msg.ai { align-self: flex-start; background: var(--surface); border: 1px solid var(--border); border-radius: 4px 18px 18px 18px; padding: 12px 14px; }
-    .msg.system { align-self: center; color: var(--muted); font-size: 12px; text-align: center; }
+  /* ── VIEWS ── */
+  .view{flex:1;overflow-y:auto;display:none;flex-direction:column}
+  .view.active{display:flex}
 
-    /* Action cards (playlists, apps, etc) */
-    .action-card { background: var(--surface); border: 1px solid var(--accent-dim); border-radius: 12px; padding: 14px; margin-top: 8px; }
-    .action-card h3 { font-size: 14px; color: var(--accent); margin-bottom: 6px; }
-    .action-card p { font-size: 13px; color: var(--muted); margin-bottom: 10px; }
-    .btn { display: inline-block; background: var(--accent); color: white; padding: 7px 14px; border-radius: 8px; text-decoration: none; font-size: 13px; font-weight: 600; border: none; cursor: pointer; margin-right: 6px; margin-top: 4px; }
-    .btn.secondary { background: var(--surface); border: 1px solid var(--border); color: var(--text); }
+  /* ── CHAT ── */
+  #chat-msgs{flex:1;padding:14px;display:flex;flex-direction:column;gap:12px}
+  .msg{max-width:90%;line-height:1.55;font-size:15px;animation:fadeUp .2s ease}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+  .msg.user{align-self:flex-end;background:var(--accent-dim);border-radius:18px 18px 4px 18px;padding:10px 14px}
+  .msg.ai{align-self:flex-start;background:var(--surface);border:1px solid var(--border);border-radius:4px 18px 18px 18px;padding:12px 14px}
+  .msg.sys{align-self:center;color:var(--muted);font-size:12px}
+  .typing{display:flex;gap:4px;align-items:center;padding:10px 14px}
+  .typing span{width:6px;height:6px;background:var(--accent);border-radius:50%;animation:tp 1.2s infinite}
+  .typing span:nth-child(2){animation-delay:.2s}
+  .typing span:nth-child(3){animation-delay:.4s}
+  @keyframes tp{0%,60%,100%{opacity:.3;transform:scale(1)}30%{opacity:1;transform:scale(1.3)}}
+  #chat-input-area{padding:10px 14px calc(var(--safe-bottom) + 10px);border-top:1px solid var(--border);display:flex;gap:8px;align-items:flex-end;flex-shrink:0}
+  #user-input{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:10px 16px;color:var(--text);font-size:15px;resize:none;max-height:120px;outline:none;line-height:1.4}
+  #user-input:focus{border-color:var(--accent)}
+  #user-input::placeholder{color:var(--muted)}
+  #send-btn{width:40px;height:40px;background:var(--accent);border:none;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  #send-btn:disabled{opacity:.4}
+  #send-btn svg{fill:white;width:18px;height:18px}
 
-    pre { background: #0d0d0d; border: 1px solid var(--border); border-radius: 8px; padding: 10px; overflow-x: auto; font-size: 12px; margin-top: 6px; white-space: pre-wrap; word-break: break-word; }
+  /* ── PLAYER VIEW ── */
+  #player-view{padding:16px;gap:14px}
+  .search-bar{display:flex;gap:8px}
+  .search-bar input{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 14px;color:var(--text);font-size:14px;outline:none}
+  .search-bar input:focus{border-color:var(--accent)}
+  .search-bar button{background:var(--accent);border:none;border-radius:10px;padding:10px 16px;color:white;font-size:14px;cursor:pointer;font-weight:600}
+  .source-tabs{display:flex;gap:8px}
+  .src-tab{padding:6px 14px;border-radius:20px;border:1px solid var(--border);font-size:13px;color:var(--muted);cursor:pointer}
+  .src-tab.active{background:var(--accent);border-color:var(--accent);color:white}
+  .track-list{display:flex;flex-direction:column;gap:2px}
+  .track{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:10px;cursor:pointer;transition:background .15s}
+  .track:hover,.track.playing{background:var(--surface)}
+  .track-thumb{width:44px;height:44px;border-radius:6px;object-fit:cover;flex-shrink:0;background:var(--border)}
+  .track-info{flex:1;min-width:0}
+  .track-title{font-size:14px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .track-sub{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .track-dur{font-size:12px;color:var(--muted);flex-shrink:0}
 
-    .typing { display: flex; gap: 4px; align-items: center; padding: 10px 14px; }
-    .typing span { width: 6px; height: 6px; background: var(--accent); border-radius: 50%; animation: pulse 1.2s infinite; }
-    .typing span:nth-child(2) { animation-delay: 0.2s; }
-    .typing span:nth-child(3) { animation-delay: 0.4s; }
-    @keyframes pulse { 0%,60%,100% { opacity:0.3; transform:scale(1); } 30% { opacity:1; transform:scale(1.3); } }
+  /* Now playing bar */
+  #now-playing{background:var(--surface);border-top:1px solid var(--border);padding:10px 14px calc(var(--safe-bottom) + 10px);display:none;align-items:center;gap:12px;flex-shrink:0}
+  #now-playing.visible{display:flex}
+  .np-thumb{width:40px;height:40px;border-radius:6px;object-fit:cover;flex-shrink:0;background:var(--border)}
+  .np-info{flex:1;min-width:0}
+  .np-title{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .np-src{font-size:11px;color:var(--muted)}
+  .np-controls{display:flex;gap:12px;align-items:center;flex-shrink:0}
+  .np-btn{background:none;border:none;color:var(--text);cursor:pointer;font-size:20px;padding:4px;line-height:1}
+  .np-btn.play{width:36px;height:36px;background:var(--accent);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px}
 
-    #input-area { padding: 10px 16px calc(var(--safe-bottom) + 10px); border-top: 1px solid var(--border); display: flex; gap: 8px; align-items: flex-end; flex-shrink: 0; background: var(--bg); }
-    #user-input { flex: 1; background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 10px 16px; color: var(--text); font-size: 15px; resize: none; max-height: 120px; outline: none; line-height: 1.4; }
-    #user-input:focus { border-color: var(--accent); }
-    #user-input::placeholder { color: var(--muted); }
-    #send-btn { width: 40px; height: 40px; background: var(--accent); border: none; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: opacity 0.15s; }
-    #send-btn:disabled { opacity: 0.4; }
-    #send-btn svg { fill: white; width: 18px; height: 18px; }
+  /* Hidden YT iframe */
+  #yt-player{position:fixed;bottom:-200px;left:0;width:1px;height:1px;opacity:0}
 
-    /* Setup */
-    #setup { position: fixed; inset: 0; background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 24px; gap: 18px; z-index: 100; }
-    #setup h1 { font-size: 36px; font-weight: 800; color: var(--accent); }
-    #setup p { color: var(--muted); text-align: center; font-size: 14px; line-height: 1.6; }
-    #setup input { width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; color: var(--text); font-size: 16px; outline: none; }
-    #setup input:focus { border-color: var(--accent); }
-    #setup button { width: 100%; background: var(--accent); color: white; border: none; border-radius: 12px; padding: 14px; font-size: 16px; font-weight: 700; cursor: pointer; }
-    #setup .hint { font-size: 12px; color: var(--muted); text-align: center; }
-    #setup a { color: var(--accent); }
+  /* ── SETTINGS ── */
+  #settings-view{padding:20px;gap:0}
+  .s-section{margin-bottom:24px}
+  .s-title{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:10px}
+  .s-row{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border)}
+  .s-row label{font-size:14px}
+  .s-row span{font-size:12px;color:var(--muted)}
+  .s-input{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 12px;color:var(--text);font-size:14px;margin-top:8px;outline:none}
+  .s-input:focus{border-color:var(--accent)}
+  .s-btn{width:100%;background:var(--accent);color:white;border:none;border-radius:10px;padding:12px;font-size:15px;font-weight:700;cursor:pointer;margin-top:8px}
+  .s-btn.sec{background:var(--surface);border:1px solid var(--border);color:var(--text)}
 
-    /* Settings panel */
-    #settings-panel { position: fixed; inset: 0; background: var(--bg); z-index: 50; display: none; flex-direction: column; padding: calc(var(--safe-top) + 16px) 20px 20px; overflow-y: auto; }
-    #settings-panel.open { display: flex; }
-    #settings-panel h2 { font-size: 18px; font-weight: 700; margin-bottom: 20px; }
-    .settings-section { margin-bottom: 24px; }
-    .settings-section h3 { font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin-bottom: 10px; }
-    .settings-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--border); }
-    .settings-row label { font-size: 14px; }
-    .settings-row span { font-size: 12px; color: var(--muted); }
-    .settings-input { width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; color: var(--text); font-size: 14px; margin-top: 6px; outline: none; }
-    .close-btn { align-self: flex-end; background: none; border: 1px solid var(--border); color: var(--text); padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 14px; margin-bottom: 16px; }
+  /* ── SETUP ── */
+  #setup{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 24px;gap:18px;z-index:100}
+  #setup h1{font-size:40px;font-weight:800;color:var(--accent)}
+  #setup p{color:var(--muted);text-align:center;font-size:14px;line-height:1.6}
+  #setup input{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 16px;color:var(--text);font-size:16px;outline:none}
+  #setup input:focus{border-color:var(--accent)}
+  #setup button{width:100%;background:var(--accent);color:white;border:none;border-radius:12px;padding:14px;font-size:16px;font-weight:700;cursor:pointer}
+  #setup .hint{font-size:12px;color:var(--muted);text-align:center}
+  #setup a{color:var(--accent)}
+
+  pre{background:#0d0d0d;border:1px solid var(--border);border-radius:8px;padding:10px;overflow-x:auto;font-size:12px;margin-top:6px;white-space:pre-wrap;word-break:break-word}
+  a{color:var(--accent)}
   </style>
 </head>
 <body>
 
-<!-- Setup screen -->
+<!-- Setup -->
 <div id="setup">
   <h1>Pulso</h1>
-  <p>Assistente pessoal conectado às suas APIs.<br/>Playlists, objetivos, apps e mais.</p>
-  <input type="password" id="gemini-key-input" placeholder="Chave Gemini (AIza...)" autocomplete="off" />
-  <button onclick="saveSetup()">Entrar</button>
+  <p>Seu secretário pessoal.<br/>Música, agenda, APIs e muito mais.</p>
+  <input type="password" id="setup-gemini" placeholder="Chave Gemini (AIza...)" autocomplete="off"/>
+  <button onclick="doSetup()">Entrar</button>
   <p class="hint">Chave salva só no seu dispositivo.<br/>Obtenha grátis em <a href="https://aistudio.google.com/apikey" target="_blank">aistudio.google.com/apikey</a></p>
 </div>
 
-<!-- Settings panel -->
-<div id="settings-panel">
-  <button class="close-btn" onclick="toggleSettings()">← Fechar</button>
-  <h2>Configurações</h2>
-
-  <div class="settings-section">
-    <h3>Gemini API</h3>
-    <input class="settings-input" type="password" id="s-gemini" placeholder="AIza..." />
-  </div>
-
-  <div class="settings-section">
-    <h3>YouTube / Google</h3>
-    <p style="font-size:13px;color:var(--muted);margin-bottom:10px;">Para criar e gerenciar playlists, buscar vídeos, etc.</p>
-    <div id="yt-auth-area">
-      <button class="btn" onclick="connectGoogle()">Conectar conta Google</button>
-    </div>
-  </div>
-
-  <div class="settings-section">
-    <h3>Spotify (em breve)</h3>
-    <div class="settings-row"><label>Conectar Spotify</label><span>→</span></div>
-  </div>
-
-  <div class="settings-section">
-    <h3>Sobre</h3>
-    <div class="settings-row"><label>Versão</label><span>0.1.0</span></div>
-    <div class="settings-row"><label>Modelo</label><span>Gemini 2.0 Flash</span></div>
-  </div>
-
-  <button class="btn" onclick="saveSettings()" style="width:100%;margin-top:10px;">Salvar</button>
-  <button class="btn secondary" onclick="clearAll()" style="width:100%;margin-top:10px;">Apagar dados locais</button>
-</div>
-
-<!-- Main -->
+<!-- Header -->
 <header>
   <div class="logo">Pul<span>so</span></div>
-  <div class="apis" id="api-pills">
-    <div class="api-pill" id="pill-gemini">✦ Gemini</div>
-    <div class="api-pill" id="pill-youtube" onclick="connectGoogle()">▶ YouTube</div>
-    <div class="api-pill" id="pill-gcal">📅 Agenda</div>
-    <div class="api-pill" onclick="toggleSettings()">⚙</div>
+  <div class="pills">
+    <div class="pill" id="pill-yt" onclick="connectYoutube()">▶ YouTube</div>
+    <div class="pill" id="pill-spotify" onclick="connectSpotify()">● Spotify</div>
+    <div class="pill" id="pill-gcal" onclick="connectGoogle()">📅 Agenda</div>
+    <div class="pill active" onclick="showTab('settings')">⚙</div>
   </div>
 </header>
 
-<div id="messages">
-  <div class="msg system" id="today-label"></div>
-  <div class="msg ai">Olá! Sou o Pulso 👋<br/><br/>Posso te ajudar com:<br/>• 🎵 Criar e gerenciar playlists no YouTube<br/>• 🎯 Seus objetivos (2027, 2030, aposentadoria)<br/>• 🛠 Criar mini-apps<br/>• 📅 Ver sua agenda Google<br/><br/>O que fazemos?</div>
+<!-- Tabs -->
+<div class="tabs">
+  <div class="tab active" id="tab-chat" onclick="showTab('chat')">💬 Assistente</div>
+  <div class="tab" id="tab-player" onclick="showTab('player')">🎵 Player</div>
+  <div class="tab" id="tab-settings" onclick="showTab('settings')">⚙ Config</div>
 </div>
 
-<div id="input-area">
-  <textarea id="user-input" placeholder="Mensagem..." rows="1"></textarea>
-  <button id="send-btn" onclick="sendMessage()">
-    <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
-  </button>
+<!-- Chat View -->
+<div class="view active" id="chat-view">
+  <div id="chat-msgs">
+    <div class="msg sys" id="today-label"></div>
+    <div class="msg ai">Olá! Sou o Pulso 👋<br/><br/>
+      • 🎵 Pedir músicas: <em>"toca Djavan"</em><br/>
+      • 📅 Agenda: <em>"o que tenho hoje?"</em><br/>
+      • 🛠 Criar apps: <em>"crie um app de hábitos"</em><br/>
+      • 🎯 Objetivos 2027, 2030, aposentadoria<br/><br/>
+      O que fazemos?
+    </div>
+  </div>
+  <div id="chat-input-area">
+    <textarea id="user-input" placeholder="Mensagem..." rows="1"></textarea>
+    <button id="send-btn" onclick="sendMessage()">
+      <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+    </button>
+  </div>
 </div>
+
+<!-- Player View -->
+<div class="view" id="player-view">
+  <div class="source-tabs">
+    <div class="src-tab active" id="src-yt" onclick="setSource('yt')">▶ YouTube</div>
+    <div class="src-tab" id="src-sp" onclick="setSource('spotify')">● Spotify</div>
+  </div>
+  <div class="search-bar">
+    <input type="text" id="search-input" placeholder="Buscar música, artista..." onkeydown="if(event.key==='Enter')doSearch()"/>
+    <button onclick="doSearch()">Buscar</button>
+  </div>
+  <div class="track-list" id="track-list">
+    <div style="color:var(--muted);font-size:13px;text-align:center;padding:40px 0">Busque uma música para começar</div>
+  </div>
+</div>
+
+<!-- Settings View -->
+<div class="view" id="settings-view">
+  <div class="s-section">
+    <div class="s-title">Gemini API</div>
+    <input class="s-input" type="password" id="s-gemini" placeholder="AIza..."/>
+  </div>
+  <div class="s-section">
+    <div class="s-title">YouTube / Google</div>
+    <input class="s-input" type="text" id="s-yt-key" placeholder="API Key pública (AIza...)"/>
+    <input class="s-input" type="text" id="s-google-cid" placeholder="OAuth Client ID (para Calendar + playlists)"/>
+    <button class="s-btn" style="margin-top:10px" onclick="connectGoogle()">Conectar conta Google →</button>
+  </div>
+  <div class="s-section">
+    <div class="s-title">Spotify</div>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:8px">Client ID para OAuth PKCE</div>
+    <input class="s-input" type="text" id="s-sp-cid" placeholder="Client ID Spotify"/>
+    <button class="s-btn" style="margin-top:10px" onclick="connectSpotify()">Conectar Spotify →</button>
+  </div>
+  <button class="s-btn" onclick="saveSettings()">Salvar configurações</button>
+  <button class="s-btn sec" onclick="clearAll()" style="margin-top:8px">Apagar dados locais</button>
+</div>
+
+<!-- Now Playing Bar -->
+<div id="now-playing">
+  <img class="np-thumb" id="np-thumb" src="" alt=""/>
+  <div class="np-info">
+    <div class="np-title" id="np-title">—</div>
+    <div class="np-src" id="np-src">—</div>
+  </div>
+  <div class="np-controls">
+    <button class="np-btn" onclick="prevTrack()">⏮</button>
+    <button class="np-btn play" id="np-play-btn" onclick="togglePlay()">▶</button>
+    <button class="np-btn" onclick="nextTrack()">⏭</button>
+  </div>
+</div>
+
+<!-- Hidden YouTube Player -->
+<div id="yt-player"></div>
 
 <script>
-// ── Storage helpers ──────────────────────────────────────────────
+// ── Storage ──────────────────────────────────────────────────────
 const S = {
-  get: k => { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } },
-  set: (k, v) => localStorage.setItem(k, JSON.stringify(v)),
+  get: k => { try { return JSON.parse(localStorage.getItem(k)); } catch { return localStorage.getItem(k); } },
+  set: (k, v) => localStorage.setItem(k, typeof v === 'string' ? v : JSON.stringify(v)),
   del: k => localStorage.removeItem(k)
 };
 
-// ── State ────────────────────────────────────────────────────────
-let messages = [];
-let isLoading = false;
-let googleToken = null;
-
+// ── Constants ────────────────────────────────────────────────────
 const GEMINI_MODEL = 'gemini-2.0-flash';
-const GEMINI_API = 'https://generativelanguage.googleapis.com/v1beta/models/' + GEMINI_MODEL + ':generateContent';
+const GEMINI_API = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
+const YT_API = 'https://www.googleapis.com/youtube/v3';
+const SP_API = 'https://api.spotify.com/v1';
+const SP_CLIENT_ID = 'b0f6f8567ca74d2bb988f3e45fe99f8c';
+const SP_REDIRECT = window.location.origin + '/spotify/callback/';
+const SP_SCOPES = 'streaming user-read-email user-read-private user-read-playback-state user-modify-playback-state playlist-modify-public playlist-modify-private user-library-read';
 
-const SYSTEM_PROMPT = `Você é o Pulso — assistente pessoal de Well Souza.
-
-Você tem acesso às seguintes capacidades (quando o usuário autorizar):
-- YouTube Data API: criar playlists, adicionar vídeos, buscar conteúdo
-- Google Calendar: ver e criar eventos
-- Criar mini-apps HTML completos
-
-CRIADOR DE APPS: Quando pedirem um app, gere HTML completo autocontido. Envolva assim:
-<APP_HTML nome="slug-do-app" titulo="Título"><!DOCTYPE html>...</APP_HTML>
-
-PLAYLISTS: Quando pedirem playlist do YouTube, responda com JSON de ação assim:
-<YT_ACTION type="create_playlist">{"title":"Nome","description":"Desc","privacy":"private"}</YT_ACTION>
-Para adicionar vídeo:
-<YT_ACTION type="add_video">{"playlistId":"ID","videoId":"VIDEO_ID"}</YT_ACTION>
-Para buscar vídeos:
-<YT_ACTION type="search">{"q":"termo de busca","maxResults":5}</YT_ACTION>
-
-Seja direto e útil. Respostas curtas no celular. PT-BR.`;
+// ── State ────────────────────────────────────────────────────────
+let chatMessages = [];
+let isLoading = false;
+let ytPlayer = null;
+let ytReady = false;
+let currentSource = 'yt';
+let currentTracks = [];
+let currentIndex = -1;
+let isPlaying = false;
+let googleToken = null;
+let spotifyToken = null;
 
 // ── Setup ────────────────────────────────────────────────────────
-function saveSetup() {
-  const key = document.getElementById('gemini-key-input').value.trim();
-  if (!key.startsWith('AIza')) { alert('Chave inválida. Deve começar com AIza'); return; }
-  S.set('gemini_key', key);
+function doSetup() {
+  const k = document.getElementById('setup-gemini').value.trim();
+  if (!k.startsWith('AIza')) { alert('Chave inválida. Deve começar com AIza'); return; }
+  S.set('gemini_key', k);
   document.getElementById('setup').style.display = 'none';
   init();
 }
@@ -198,215 +260,374 @@ function saveSetup() {
 function init() {
   if (!S.get('gemini_key')) return;
   document.getElementById('setup').style.display = 'none';
-  document.getElementById('today-label').textContent = new Date().toLocaleDateString('pt-BR', {weekday:'long', day:'numeric', month:'long'});
-  document.getElementById('pill-gemini').classList.add('connected');
-  googleToken = S.get('google_token');
-  if (googleToken) {
-    document.getElementById('pill-youtube').classList.add('connected');
-    document.getElementById('pill-gcal').classList.add('connected');
-  }
-}
+  document.getElementById('today-label').textContent =
+    new Date().toLocaleDateString('pt-BR', {weekday:'long', day:'numeric', month:'long'});
 
-// ── Settings ─────────────────────────────────────────────────────
-function toggleSettings() {
-  const p = document.getElementById('settings-panel');
-  p.classList.toggle('open');
-  if (p.classList.contains('open')) {
-    document.getElementById('s-gemini').value = S.get('gemini_key') || '';
-  }
+  // Restore tokens
+  googleToken = S.get('google_token');
+  spotifyToken = S.get('spotify_token');
+  if (googleToken) { document.getElementById('pill-yt').classList.add('on'); document.getElementById('pill-gcal').classList.add('on'); }
+  if (spotifyToken) document.getElementById('pill-spotify').classList.add('on');
+
+  // Load settings fields
+  document.getElementById('s-gemini').value = S.get('gemini_key') || '';
+  document.getElementById('s-yt-key').value = S.get('yt_api_key') || 'AIzaSyDcbvEGd5-YW3cP-J8cZiIDMDoFAnx3RpI';
+  document.getElementById('s-google-cid').value = S.get('google_client_id') || '';
+  document.getElementById('s-sp-cid').value = SP_CLIENT_ID;
+
+  loadYouTubeAPI();
 }
 
 function saveSettings() {
-  const key = document.getElementById('s-gemini').value.trim();
-  if (key) S.set('gemini_key', key);
-  toggleSettings();
-  init();
+  const g = document.getElementById('s-gemini').value.trim();
+  const yk = document.getElementById('s-yt-key').value.trim();
+  const gc = document.getElementById('s-google-cid').value.trim();
+  if (g) S.set('gemini_key', g);
+  if (yk) S.set('yt_api_key', yk);
+  if (gc) S.set('google_client_id', gc);
+  showTab('chat');
+  addMsg('ai', '✅ Configurações salvas!');
 }
 
 function clearAll() {
-  if (confirm('Apagar todos os dados locais?')) { localStorage.clear(); location.reload(); }
+  if (confirm('Apagar todos os dados?')) { localStorage.clear(); location.reload(); }
+}
+
+// ── Tabs ─────────────────────────────────────────────────────────
+function showTab(name) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  document.getElementById(name + '-view').classList.add('active');
 }
 
 // ── Google OAuth ──────────────────────────────────────────────────
-// Uses implicit flow — token stored locally, no server needed
-const GOOGLE_CLIENT_ID = ''; // user must set in settings — or use device OAuth
 function connectGoogle() {
-  // Check if client ID configured
-  const cid = S.get('google_client_id');
+  const cid = S.get('google_client_id') || document.getElementById('s-google-cid').value.trim();
   if (!cid) {
-    addMessage('ai', `Para conectar o Google, precisamos configurar o OAuth. Por enquanto, você pode usar a chave de API do YouTube para buscas.\n\nEm breve terei o fluxo completo de login aqui. Quer que eu crie uma playlist demo com vídeos que você me indicar?`);
+    addMsg('ai', '⚠️ Para conectar o Google, preencha o **OAuth Client ID** nas configurações.\n\n1. Acesse console.cloud.google.com\n2. APIs & Services → Credentials\n3. Create Credentials → OAuth 2.0 Client ID\n4. Application type: Web application\n5. Authorized redirect URIs: ' + window.location.origin + '\n6. Cole o Client ID nas configurações');
+    showTab('chat');
     return;
   }
+  S.set('google_client_id', cid);
   const params = new URLSearchParams({
     client_id: cid,
     redirect_uri: window.location.origin,
     response_type: 'token',
-    scope: 'https://www.googleapis.com/auth/youtube https://www.googleapis.com/auth/calendar',
+    scope: 'https://www.googleapis.com/auth/youtube https://www.googleapis.com/auth/calendar.readonly',
     prompt: 'consent'
   });
   window.location.href = 'https://accounts.google.com/o/oauth2/v2/auth?' + params;
 }
 
-// Handle OAuth redirect token
+function connectYoutube() { connectGoogle(); }
+
+// ── Spotify OAuth PKCE ────────────────────────────────────────────
+async function connectSpotify() {
+  if (spotifyToken) { addMsg('ai', '✅ Spotify já conectado!'); showTab('chat'); return; }
+  const verifier = generateRandom(64);
+  const challenge = await pkceChallenge(verifier);
+  S.set('spotify_code_verifier', verifier);
+  const params = new URLSearchParams({
+    client_id: SP_CLIENT_ID,
+    response_type: 'code',
+    redirect_uri: SP_REDIRECT,
+    code_challenge_method: 'S256',
+    code_challenge: challenge,
+    scope: SP_SCOPES
+  });
+  window.location.href = 'https://accounts.spotify.com/authorize?' + params;
+}
+
+function generateRandom(len) {
+  const arr = new Uint8Array(len);
+  crypto.getRandomValues(arr);
+  return btoa(String.fromCharCode(...arr)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
+}
+async function pkceChallenge(verifier) {
+  const data = new TextEncoder().encode(verifier);
+  const digest = await crypto.subtle.digest('SHA-256', data);
+  return btoa(String.fromCharCode(...new Uint8Array(digest))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
+}
+
+// Handle Google implicit token on redirect
 function handleOAuthRedirect() {
   const hash = new URLSearchParams(window.location.hash.slice(1));
   const token = hash.get('access_token');
   if (token) {
     S.set('google_token', token);
     googleToken = token;
-    window.history.replaceState({}, '', window.location.pathname);
-    document.getElementById('pill-youtube').classList.add('connected');
-    document.getElementById('pill-gcal').classList.add('connected');
-    addMessage('ai', '✅ Google conectado! Já posso criar playlists no YouTube e ver sua agenda.');
+    window.history.replaceState({}, '', '/');
+    document.getElementById('pill-yt').classList.add('on');
+    document.getElementById('pill-gcal').classList.add('on');
+    addMsg('ai', '✅ Google conectado! Já posso criar playlists e ver sua agenda.');
+    showTab('chat');
+  }
+  // Handle Spotify token restore
+  spotifyToken = S.get('spotify_token');
+  if (spotifyToken) document.getElementById('pill-spotify').classList.add('on');
+}
+
+// ── YouTube IFrame API ────────────────────────────────────────────
+function loadYouTubeAPI() {
+  if (window.YT) { ytReady = true; return; }
+  const tag = document.createElement('script');
+  tag.src = 'https://www.youtube.com/iframe_api';
+  document.head.appendChild(tag);
+}
+
+window.onYouTubeIframeAPIReady = function() {
+  ytPlayer = new YT.Player('yt-player', {
+    height: '1', width: '1',
+    events: {
+      onReady: () => { ytReady = true; },
+      onStateChange: (e) => {
+        if (e.data === YT.PlayerState.ENDED) nextTrack();
+        isPlaying = e.data === YT.PlayerState.PLAYING;
+        document.getElementById('np-play-btn').textContent = isPlaying ? '⏸' : '▶';
+      }
+    }
+  });
+};
+
+// ── YouTube Search ────────────────────────────────────────────────
+async function searchYouTube(query) {
+  const key = S.get('yt_api_key') || 'AIzaSyDcbvEGd5-YW3cP-J8cZiIDMDoFAnx3RpI';
+  const params = new URLSearchParams({ part:'snippet', q:query, maxResults:10, type:'video', videoCategoryId:'10', key });
+  const res = await fetch(`${YT_API}/search?${params}`);
+  const data = await res.json();
+  return (data.items || []).map(v => ({
+    id: v.id.videoId,
+    title: v.snippet.title,
+    artist: v.snippet.channelTitle,
+    thumb: v.snippet.thumbnails?.default?.url,
+    source: 'youtube'
+  }));
+}
+
+// ── Spotify Search ────────────────────────────────────────────────
+async function searchSpotify(query) {
+  if (!spotifyToken) {
+    addMsg('ai', 'Spotify não conectado. Clique em "● Spotify" para conectar.');
+    showTab('chat');
+    return [];
+  }
+  const params = new URLSearchParams({ q:query, type:'track', limit:10 });
+  const res = await fetch(`${SP_API}/search?${params}`, { headers: { Authorization: 'Bearer ' + spotifyToken } });
+  const data = await res.json();
+  return (data.tracks?.items || []).map(t => ({
+    id: t.id,
+    uri: t.uri,
+    title: t.name,
+    artist: t.artists.map(a=>a.name).join(', '),
+    thumb: t.album.images?.[2]?.url,
+    duration: Math.floor(t.duration_ms/60000) + ':' + String(Math.floor((t.duration_ms%60000)/1000)).padStart(2,'0'),
+    source: 'spotify'
+  }));
+}
+
+// ── Player Controls ───────────────────────────────────────────────
+function setSource(src) {
+  currentSource = src;
+  document.querySelectorAll('.src-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('src-' + src).classList.add('active');
+}
+
+async function doSearch() {
+  const q = document.getElementById('search-input').value.trim();
+  if (!q) return;
+  const list = document.getElementById('track-list');
+  list.innerHTML = '<div style="color:var(--muted);text-align:center;padding:20px">Buscando...</div>';
+  try {
+    const tracks = currentSource === 'yt' ? await searchYouTube(q) : await searchSpotify(q);
+    currentTracks = tracks;
+    renderTracks(tracks);
+  } catch(e) {
+    list.innerHTML = `<div style="color:var(--muted);text-align:center;padding:20px">Erro: ${e.message}</div>`;
   }
 }
 
-// ── Gemini API ────────────────────────────────────────────────────
-async function callGemini(userText) {
+function renderTracks(tracks) {
+  const list = document.getElementById('track-list');
+  if (!tracks.length) { list.innerHTML = '<div style="color:var(--muted);text-align:center;padding:20px">Nenhum resultado</div>'; return; }
+  list.innerHTML = '';
+  tracks.forEach((t, i) => {
+    const div = document.createElement('div');
+    div.className = 'track' + (i === currentIndex ? ' playing' : '');
+    div.onclick = () => playTrack(i);
+    div.innerHTML = `
+      <img class="track-thumb" src="${t.thumb || ''}" onerror="this.style.background='var(--border)'"/>
+      <div class="track-info">
+        <div class="track-title">${t.title}</div>
+        <div class="track-sub">${t.artist}</div>
+      </div>
+      ${t.duration ? `<div class="track-dur">${t.duration}</div>` : ''}
+    `;
+    list.appendChild(div);
+  });
+}
+
+function playTrack(index) {
+  const t = currentTracks[index];
+  if (!t) return;
+  currentIndex = index;
+
+  // Update now playing bar
+  document.getElementById('now-playing').classList.add('visible');
+  document.getElementById('np-title').textContent = t.title;
+  document.getElementById('np-src').textContent = (t.source === 'youtube' ? '▶ YouTube' : '● Spotify') + ' · ' + t.artist;
+  document.getElementById('np-thumb').src = t.thumb || '';
+
+  if (t.source === 'youtube' && ytPlayer && ytReady) {
+    ytPlayer.loadVideoById(t.id);
+    isPlaying = true;
+    document.getElementById('np-play-btn').textContent = '⏸';
+  } else if (t.source === 'spotify') {
+    playSpotify(t.uri);
+  }
+
+  renderTracks(currentTracks);
+}
+
+async function playSpotify(uri) {
+  if (!spotifyToken) return;
+  // Try Web Playback SDK or fallback to Connect API
+  try {
+    await fetch(`${SP_API}/me/player/play`, {
+      method: 'PUT',
+      headers: { Authorization: 'Bearer ' + spotifyToken, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ uris: [uri] })
+    });
+    isPlaying = true;
+    document.getElementById('np-play-btn').textContent = '⏸';
+  } catch(e) { console.error(e); }
+}
+
+function togglePlay() {
+  if (currentSource === 'yt' && ytPlayer && ytReady) {
+    if (isPlaying) { ytPlayer.pauseVideo(); } else { ytPlayer.playVideo(); }
+  } else if (currentSource === 'spotify' && spotifyToken) {
+    const action = isPlaying ? 'pause' : 'play';
+    fetch(`${SP_API}/me/player/${action}`, { method: 'PUT', headers: { Authorization: 'Bearer ' + spotifyToken } });
+  }
+}
+
+function nextTrack() { if (currentIndex < currentTracks.length - 1) playTrack(currentIndex + 1); }
+function prevTrack() { if (currentIndex > 0) playTrack(currentIndex - 1); }
+
+// ── Gemini ────────────────────────────────────────────────────────
+const SYSTEM = `Você é o Pulso — secretário pessoal de Well Souza.
+
+Capacidades disponíveis:
+- Player de música (YouTube e Spotify integrados)
+- Agenda Google Calendar
+- Criar mini-apps HTML
+
+Quando pedirem música, responda com:
+<PLAY_MUSIC query="nome artista ou música">
+
+Quando pedirem app, gere HTML completo:
+<APP_HTML nome="slug" titulo="Título"><!DOCTYPE html>...</APP_HTML>
+
+Seja direto. PT-BR. Respostas curtas no celular.`;
+
+async function callGemini(text) {
   const key = S.get('gemini_key');
-  const history = messages.slice(-12).map(m => ({
+  const history = chatMessages.slice(-10).map(m => ({
     role: m.role === 'user' ? 'user' : 'model',
     parts: [{ text: m.content }]
   }));
-
   const body = {
-    system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
-    contents: [...history, { role: 'user', parts: [{ text: userText }] }],
-    generationConfig: { maxOutputTokens: 4096, temperature: 0.9 }
+    system_instruction: { parts: [{ text: SYSTEM }] },
+    contents: [...history, { role:'user', parts:[{ text }] }],
+    generationConfig: { maxOutputTokens: 2048, temperature: 0.9 }
   };
-
-  const res = await fetch(GEMINI_API + '?key=' + key, {
+  const res = await fetch(`${GEMINI_API}?key=${key}`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
   });
-  if (!res.ok) {
-    const e = await res.json();
-    throw new Error(e.error?.message || 'Erro Gemini');
-  }
+  if (!res.ok) { const e = await res.json(); throw new Error(e.error?.message || 'Erro Gemini'); }
   const data = await res.json();
   return data.candidates?.[0]?.content?.parts?.[0]?.text || '(sem resposta)';
 }
 
-// ── YouTube Actions ───────────────────────────────────────────────
-async function executeYTAction(type, payload) {
-  if (!googleToken) {
-    return '⚠️ YouTube não conectado. Clique em "▶ YouTube" no topo para conectar.';
-  }
-  const base = 'https://www.googleapis.com/youtube/v3';
-  const headers = { Authorization: 'Bearer ' + googleToken, 'Content-Type': 'application/json' };
-
-  if (type === 'create_playlist') {
-    const res = await fetch(base + '/playlists?part=snippet,status', {
-      method: 'POST', headers,
-      body: JSON.stringify({ snippet: { title: payload.title, description: payload.description || '' }, status: { privacyStatus: payload.privacy || 'private' } })
-    });
-    const data = await res.json();
-    if (data.id) return `✅ Playlist criada: **${data.snippet.title}**\nID: \`${data.id}\`\n[Abrir no YouTube](https://youtube.com/playlist?list=${data.id})`;
-    return '❌ Erro ao criar playlist: ' + JSON.stringify(data.error?.message);
-  }
-
-  if (type === 'search') {
-    const params = new URLSearchParams({ part: 'snippet', q: payload.q, maxResults: payload.maxResults || 5, type: 'video' });
-    const res = await fetch(base + '/search?' + params, { headers });
-    const data = await res.json();
-    const items = data.items || [];
-    return items.map((v, i) => `${i+1}. **${v.snippet.title}**\n   ID: \`${v.id.videoId}\`\n   [Abrir](https://youtube.com/watch?v=${v.id.videoId})`).join('\n\n');
-  }
-
-  if (type === 'add_video') {
-    const res = await fetch(base + '/playlistItems?part=snippet', {
-      method: 'POST', headers,
-      body: JSON.stringify({ snippet: { playlistId: payload.playlistId, resourceId: { kind: 'youtube#video', videoId: payload.videoId } } })
-    });
-    const data = await res.json();
-    if (data.id) return `✅ Vídeo adicionado à playlist!`;
-    return '❌ Erro: ' + JSON.stringify(data.error?.message);
-  }
-
-  return 'Ação desconhecida: ' + type;
-}
-
-// ── Message handling ──────────────────────────────────────────────
 async function sendMessage() {
   const input = document.getElementById('user-input');
   const text = input.value.trim();
   if (!text || isLoading) return;
-
-  input.value = '';
-  input.style.height = 'auto';
+  input.value = ''; input.style.height = 'auto';
   addMsg('user', text);
-  messages.push({ role: 'user', content: text });
+  chatMessages.push({ role:'user', content:text });
   setLoading(true);
-
   try {
     const reply = await callGemini(text);
-    messages.push({ role: 'assistant', content: reply });
+    chatMessages.push({ role:'assistant', content:reply });
 
-    // Check for app generation
+    const playMatch = reply.match(/<PLAY_MUSIC\s+query="([^"]+)">/);
     const appMatch = reply.match(/<APP_HTML\s+nome="([^"]+)"\s+titulo="([^"]+)">([\s\S]*?)<\/APP_HTML>/);
-    // Check for YouTube action
-    const ytMatch = reply.match(/<YT_ACTION\s+type="([^"]+)">([\s\S]*?)<\/YT_ACTION>/);
 
-    if (appMatch) {
-      const [, nome, titulo, html] = appMatch;
-      const clean = reply.replace(/<APP_HTML[\s\S]*?<\/APP_HTML>/, '').trim();
+    if (playMatch) {
+      const q = playMatch[1];
+      const clean = reply.replace(/<PLAY_MUSIC[^>]*>/,'').trim();
       if (clean) addMsg('ai', clean);
-      const blob = new Blob([html], { type: 'text/html' });
+      addMsg('ai', `🎵 Buscando: <em>${q}</em>...`);
+      const tracks = await searchYouTube(q);
+      if (tracks.length) {
+        currentTracks = tracks;
+        currentSource = 'yt';
+        playTrack(0);
+        showTab('player');
+        renderTracks(tracks);
+      } else { addMsg('ai', 'Não encontrei resultados para essa busca.'); }
+    } else if (appMatch) {
+      const [,nome,titulo,html] = appMatch;
+      const clean = reply.replace(/<APP_HTML[\s\S]*?<\/APP_HTML>/,'').trim();
+      if (clean) addMsg('ai', clean);
+      const blob = new Blob([html], {type:'text/html'});
       const url = URL.createObjectURL(blob);
       const card = document.createElement('div');
-      card.className = 'action-card';
-      card.innerHTML = `<h3>✅ App: ${titulo}</h3><p>Gerado agora pelo Pulso</p><a class="btn" href="${url}" target="_blank">Abrir app →</a>`;
-      document.getElementById('messages').appendChild(card);
-    } else if (ytMatch) {
-      const [, type, rawJson] = ytMatch;
-      let payload;
-      try { payload = JSON.parse(rawJson.trim()); } catch { payload = {}; }
-      const clean = reply.replace(/<YT_ACTION[\s\S]*?<\/YT_ACTION>/, '').trim();
-      if (clean) addMsg('ai', clean);
-      setLoading(true);
-      const result = await executeYTAction(type, payload);
-      addMsg('ai', result);
+      card.style.cssText = 'background:var(--surface);border:1px solid var(--accent-dim);border-radius:12px;padding:14px;margin-top:4px';
+      card.innerHTML = `<div style="color:var(--accent);font-size:14px;font-weight:600;margin-bottom:6px">✅ App: ${titulo}</div><a href="${url}" target="_blank" style="background:var(--accent);color:white;padding:7px 14px;border-radius:8px;text-decoration:none;font-size:13px;font-weight:600">Abrir app →</a>`;
+      document.getElementById('chat-msgs').appendChild(card);
     } else {
       addMsg('ai', reply);
     }
-  } catch (e) {
-    addMsg('ai', `Erro: ${e.message}`);
-  } finally {
-    setLoading(false);
-  }
+  } catch(e) { addMsg('ai', `Erro: ${e.message}`); }
+  finally { setLoading(false); }
 }
 
 function addMsg(role, text) {
   const div = document.createElement('div');
-  div.className = 'msg ' + role;
+  div.className = 'msg ' + (role === 'user' ? 'user' : role === 'sys' ? 'sys' : 'ai');
   div.innerHTML = text
-    .replace(/```([\s\S]*?)```/g, '<pre>$1</pre>')
-    .replace(/`([^`]+)`/g, '<code style="background:#1a1a1a;padding:2px 5px;border-radius:4px;font-size:12px">$1</code>')
-    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
-    .replace(/\[([^\]]+)\]\((https?:[^)]+)\)/g, '<a href="$2" target="_blank" style="color:var(--accent)">$1</a>')
-    .replace(/\n/g, '<br/>');
-  document.getElementById('messages').appendChild(div);
-  document.getElementById('messages').scrollTop = 99999;
+    .replace(/```([\s\S]*?)```/g,'<pre>$1</pre>')
+    .replace(/`([^`]+)`/g,'<code style="background:#1a1a1a;padding:2px 5px;border-radius:4px;font-size:12px">$1</code>')
+    .replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>')
+    .replace(/\[([^\]]+)\]\((https?:[^)]+)\)/g,'<a href="$2" target="_blank">$1</a>')
+    .replace(/\n/g,'<br/>');
+  const msgs = document.getElementById('chat-msgs');
+  msgs.appendChild(div);
+  msgs.scrollTop = 99999;
 }
 
 function setLoading(val) {
   isLoading = val;
   document.getElementById('send-btn').disabled = val;
-  const ex = document.getElementById('typing-indicator');
+  const ex = document.getElementById('typing-ind');
   if (val && !ex) {
     const t = document.createElement('div');
-    t.id = 'typing-indicator'; t.className = 'msg ai';
+    t.id = 'typing-ind'; t.className = 'msg ai';
     t.innerHTML = '<div class="typing"><span></span><span></span><span></span></div>';
-    document.getElementById('messages').appendChild(t);
-    document.getElementById('messages').scrollTop = 99999;
+    const msgs = document.getElementById('chat-msgs');
+    msgs.appendChild(t); msgs.scrollTop = 99999;
   } else if (!val && ex) { ex.remove(); }
 }
 
 document.getElementById('user-input').addEventListener('input', function() {
   this.style.height = 'auto';
-  this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+  this.style.height = Math.min(this.scrollHeight,120)+'px';
 });
 document.getElementById('user-input').addEventListener('keydown', function(e) {
-  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+  if (e.key==='Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
 });
 
 handleOAuthRedirect();
