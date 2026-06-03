@@ -265,64 +265,36 @@ let isPlaying = false;
 let googleToken = null;
 let spotifyToken = null;
 
-// ── Auth ─────────────────────────────────────────────────────────
-async function doLogin() {
-  const pass = document.getElementById('login-pass').value;
-  const btn = document.getElementById('login-btn');
-  const err = document.getElementById('login-err');
-  if (!pass) return;
-  btn.textContent = '...'; btn.disabled = true; err.style.display = 'none';
-  try {
-    const res = await fetch('/api/auth', {
-      method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ action: 'login', password: pass })
-    });
-    const data = await res.json();
-    if (data.ok) {
-      S.set('pulso_token', data.token);
-      document.getElementById('login').style.display = 'none';
-      await loadSettings();
-    } else {
-      err.style.display = 'block';
-    }
-  } catch(e) {
-    err.textContent = 'Erro: ' + e.message; err.style.display = 'block';
-  } finally { btn.textContent = 'Entrar'; btn.disabled = false; }
+// ── Auth — senha local, hash SHA-256 ─────────────────────────────
+const PASSWORD_HASH = '45b743b9bf2f6a184b5e699897c0548b82d18ae34b5bc6e13d4f1a7c6bb5c81a';
+
+async function hashPassword(pass) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pass));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
 }
 
-async function loadSettings() {
-  const token = S.get('pulso_token');
-  if (!token) return;
-  try {
-    const res = await fetch('/api/settings?token=' + token);
-    const data = await res.json();
-    if (data.ok && data.settings) {
-      const cfg = data.settings;
-      if (cfg.gemini_key) S.set('gemini_key', cfg.gemini_key);
-      if (cfg.yt_api_key) S.set('yt_api_key', cfg.yt_api_key);
-      if (cfg.google_client_id) S.set('google_client_id', cfg.google_client_id);
+async function doLogin() {
+  const pass = document.getElementById('login-pass').value;
+  const btn  = document.getElementById('login-btn');
+  const err  = document.getElementById('login-err');
+  if (!pass) return;
+  btn.textContent = '...'; btn.disabled = true; err.style.display = 'none';
+  const hash = await hashPassword(pass);
+  if (hash === PASSWORD_HASH) {
+    S.set('pulso_auth', '1');
+    document.getElementById('login').style.display = 'none';
+    if (!S.get('gemini_key')) {
+      document.getElementById('setup').style.display = 'flex';
+    } else {
+      init();
     }
-  } catch(e) { console.warn('loadSettings:', e); }
-  if (!S.get('gemini_key')) {
-    document.getElementById('setup').style.display = 'flex';
   } else {
-    init();
+    err.style.display = 'block';
+    btn.textContent = 'Entrar'; btn.disabled = false;
   }
 }
 
-async function syncSettings() {
-  const token = S.get('pulso_token');
-  if (!token) return;
-  const settings = {
-    gemini_key: S.get('gemini_key'),
-    yt_api_key: S.get('yt_api_key'),
-    google_client_id: S.get('google_client_id')
-  };
-  await fetch('/api/settings', {
-    method: 'POST', headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({ token, settings })
-  });
-}
+function syncSettings() { /* settings ficam no localStorage por enquanto */ }
 
 // ── Setup (first time) ────────────────────────────────────────────
 function doSetup() {
@@ -711,31 +683,15 @@ document.getElementById('user-input').addEventListener('keydown', function(e) {
 
 handleOAuthRedirect();
 
-// Entry point: check if already logged in
-(async () => {
-  const token = S.get('pulso_token');
-  if (!token) return; // show login screen
-  // Verify token still valid
-  try {
-    const res = await fetch('/api/auth', {
-      method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ action: 'verify', token })
-    });
-    const data = await res.json();
-    if (data.ok) {
-      document.getElementById('login').style.display = 'none';
-      await loadSettings();
-    } else {
-      S.del('pulso_token');
-    }
-  } catch(e) {
-    // If API fails (local dev), fallback to local key
-    if (S.get('gemini_key')) {
-      document.getElementById('login').style.display = 'none';
-      init();
-    }
+// Entry point
+if (S.get('pulso_auth') === '1') {
+  document.getElementById('login').style.display = 'none';
+  if (!S.get('gemini_key')) {
+    document.getElementById('setup').style.display = 'flex';
+  } else {
+    init();
   }
-})();
+}
 </script>
 </body>
 </html>
