@@ -59,6 +59,9 @@
   #send-btn{width:40px;height:40px;background:var(--accent);border:none;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
   #send-btn:disabled{opacity:.4}
   #send-btn svg{fill:white;width:18px;height:18px}
+  #camera-btn{width:36px;height:36px;background:var(--surface);border:1px solid var(--border);border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:18px}
+  .img-preview{max-width:200px;border-radius:10px;margin-top:6px;display:block}
+  .img-analyzing{color:var(--muted);font-size:13px;font-style:italic}
 
   /* ── PLAYER VIEW ── */
   #player-view{padding:16px;gap:14px}
@@ -292,7 +295,9 @@
     </div>
   </div>
   <div id="chat-input-area">
-    <textarea id="user-input" placeholder="Mensagem..." rows="1"></textarea>
+    <button id="camera-btn" onclick="openCamera()" title="Foto para IA">📷</button>
+    <input type="file" id="camera-input" accept="image/*" capture="environment" style="display:none" onchange="handlePhoto(this)"/>
+    <textarea id="user-input" placeholder="Mensagem ou descreva a foto..." rows="1"></textarea>
     <button id="send-btn" onclick="sendMessage()">
       <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
     </button>
@@ -481,18 +486,20 @@ function showTab(name) {
 
 // ── Google OAuth ──────────────────────────────────────────────────
 function connectGoogle() {
-  const cid = S.get('google_client_id') || document.getElementById('s-google-cid').value.trim();
-  if (!cid) {
-    addMsg('ai', '⚠️ Para conectar o Google, preencha o **OAuth Client ID** nas configurações.\n\n1. Acesse console.cloud.google.com\n2. APIs & Services → Credentials\n3. Create Credentials → OAuth 2.0 Client ID\n4. Application type: Web application\n5. Authorized redirect URIs: ' + window.location.origin + '\n6. Cole o Client ID nas configurações');
-    showTab('chat');
-    return;
-  }
+  const cid = S.get('google_client_id') || DEFAULT_GOOGLE_CID;
+  if (!cid) { addMsg('ai', '⚠️ Client ID não configurado.'); showTab('chat'); return; }
   S.set('google_client_id', cid);
   const params = new URLSearchParams({
     client_id: cid,
     redirect_uri: window.location.origin,
     response_type: 'token',
-    scope: 'https://www.googleapis.com/auth/youtube https://www.googleapis.com/auth/calendar.readonly',
+    scope: [
+      'https://www.googleapis.com/auth/youtube',
+      'https://www.googleapis.com/auth/calendar.readonly',
+      'https://www.googleapis.com/auth/fitness.activity.read',
+      'https://www.googleapis.com/auth/fitness.sleep.read',
+      'https://www.googleapis.com/auth/fitness.heart_rate.read'
+    ].join(' '),
     prompt: 'consent'
   });
   window.location.href = 'https://accounts.google.com/o/oauth2/v2/auth?' + params;
@@ -936,6 +943,92 @@ function ansiToHtml(text) {
 function escHtml(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
+
+// ── Câmera → Gemini Vision ────────────────────────────────────────
+let pendingImageB64 = null;
+let pendingImageMime = null;
+
+function openCamera() {
+  document.getElementById('camera-input').click();
+}
+
+function handlePhoto(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const dataUrl = e.target.result;
+    const [meta, b64] = dataUrl.split(',');
+    pendingImageB64 = b64;
+    pendingImageMime = file.type || 'image/jpeg';
+
+    // Mostra preview no chat
+    const div = document.createElement('div');
+    div.className = 'msg user';
+    div.style.maxWidth = '220px';
+    div.innerHTML = `<img src="${dataUrl}" class="img-preview"/><div style="font-size:12px;color:#ccc;margin-top:4px">📷 Foto enviada</div>`;
+    document.getElementById('chat-msgs').appendChild(div);
+    document.getElementById('chat-msgs').scrollTop = 99999;
+
+    // Se não tiver texto pendente, envia automaticamente
+    const inputEl = document.getElementById('user-input');
+    if (!inputEl.value.trim()) {
+      sendMessageWithImage('Analise esta imagem e me diga o que vê. Seja direto e útil.');
+    }
+    input.value = '';
+  };
+  reader.readAsDataURL(file);
+}
+
+async function sendMessageWithImage(text) {
+  if (!pendingImageB64) return;
+  const b64 = pendingImageB64;
+  const mime = pendingImageMime;
+  pendingImageB64 = null;
+  pendingImageMime = null;
+
+  chatMessages.push({ role: 'user', content: `[imagem enviada] ${text}` });
+  setLoading(true);
+
+  try {
+    const key = S.get('gemini_key');
+    const body = {
+      system_instruction: { parts: [{ text: SYSTEM }] },
+      contents: [{
+        role: 'user',
+        parts: [
+          { inline_data: { mime_type: mime, data: b64 } },
+          { text }
+        ]
+      }],
+      generationConfig: { maxOutputTokens: 1024 }
+    };
+    const res = await fetch(`${GEMINI_API}?key=${key}`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
+    });
+    const data = await res.json();
+    const reply = data.candidates?.[0]?.content?.parts?.[0]?.text || '(sem resposta)';
+    chatMessages.push({ role: 'assistant', content: reply });
+    addMsg('ai', reply);
+  } catch(e) {
+    addMsg('ai', `Erro: ${e.message}`);
+  } finally {
+    setLoading(false);
+  }
+}
+
+// Intercepta sendMessage para incluir imagem pendente se houver
+const _origSend = sendMessage;
+sendMessage = async function() {
+  if (pendingImageB64) {
+    const text = document.getElementById('user-input').value.trim() || 'Analise esta imagem.';
+    document.getElementById('user-input').value = '';
+    addMsg('user', text);
+    await sendMessageWithImage(text);
+    return;
+  }
+  _origSend();
+};
 
 // ── Service Worker ────────────────────────────────────────────────
 if ('serviceWorker' in navigator) {
