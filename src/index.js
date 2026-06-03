@@ -34,6 +34,12 @@ export default {
     if (path === '/api/tasks' && request.method === 'GET')
       return handleGetTasks(request, env);
 
+    if (path === '/api/terminal' && request.method === 'POST')
+      return handleTerminal(request, env);
+
+    if (path === '/api/email-reply' && request.method === 'POST')
+      return handleEmailReply(request, env);
+
     // Static assets handled by Cloudflare [assets] config
     return env.ASSETS.fetch(request);
   },
@@ -103,6 +109,235 @@ async function handleGetTasks(request, env) {
   const raw = await env.PULSO_KV.get('tasks');
   return json({ ok: true, tasks: JSON.parse(raw || '[]') });
 }
+
+// ── Terminal ──────────────────────────────────────────────────────
+async function handleTerminal(request, env) {
+  const { cmd, history } = await request.json();
+  if (!cmd) return json({ ok: false, output: 'Comando vazio' });
+
+  const parts = cmd.trim().split(/\s+/);
+  const command = parts[0].toLowerCase();
+  const args = parts.slice(1);
+
+  // Built-in commands
+  if (command === 'help') return json({ ok: true, output: HELP_TEXT });
+  if (command === 'clear') return json({ ok: true, output: '', clear: true });
+
+  if (command === 'status') {
+    const feed = JSON.parse(await env.PULSO_KV.get('site_feed') || '[]');
+    const tasks = JSON.parse(await env.PULSO_KV.get('tasks') || '[]');
+    const pending = tasks.filter(t => !t.done).length;
+    const last = feed[0];
+    return json({ ok: true, output:
+      `\x1b[32m● PULSO STATUS\x1b[0m\n` +
+      `  Sites conectados : concursos, benfazeja, wellsouza, luasites\n` +
+      `  Eventos no feed  : ${feed.length}\n` +
+      `  Tarefas pendentes: ${pending}\n` +
+      `  Último evento    : ${last ? `[${last.site}] ${last.type} — ${timeAgo(last.timestamp)}` : 'nenhum'}\n`
+    });
+  }
+
+  if (command === 'feed') {
+    const feed = JSON.parse(await env.PULSO_KV.get('site_feed') || '[]');
+    if (!feed.length) return json({ ok: true, output: 'Nenhum evento ainda.' });
+    const n = parseInt(args[0]) || 10;
+    const out = feed.slice(0, n).map((e, i) =>
+      `\x1b[33m${String(i+1).padStart(2)}.\x1b[0m [\x1b[36m${e.site}\x1b[0m] \x1b[37m${eventLabel(e.type, e.data)}\x1b[0m\n    \x1b[90m${timeAgo(e.timestamp)}\x1b[0m`
+    ).join('\n');
+    return json({ ok: true, output: out });
+  }
+
+  if (command === 'emails') {
+    const feed = JSON.parse(await env.PULSO_KV.get('site_feed') || '[]');
+    const emails = feed.filter(e => e.type === 'email_received');
+    if (!emails.length) return json({ ok: true, output: 'Nenhum email no feed. Configure o bridge nos sites.' });
+    const out = emails.slice(0, 10).map((e, i) =>
+      `\x1b[33m[${e.data?.id || i}]\x1b[0m De: \x1b[36m${e.data?.from || '?'}\x1b[0m\n` +
+      `    Assunto: ${e.data?.subject || '?'}\n` +
+      `    \x1b[90m${timeAgo(e.timestamp)}\x1b[0m`
+    ).join('\n\n');
+    return json({ ok: true, output: out });
+  }
+
+  if (command === 'reply') {
+    // reply <email_id> <mensagem...>
+    const id = args[0];
+    const msg = args.slice(1).join(' ');
+    if (!id || !msg) return json({ ok: true, output: 'Uso: reply <email_id> <mensagem>' });
+    // Busca email no feed
+    const feed = JSON.parse(await env.PULSO_KV.get('site_feed') || '[]');
+    const email = feed.find(e => e.type === 'email_received' && String(e.data?.id) === String(id));
+    if (!email) return json({ ok: true, output: `\x1b[31mEmail #${id} não encontrado.\x1b[0m Use 'emails' para listar.` });
+    // Envia reply via parla-mkt
+    try {
+      const res = await fetch(`${email.data?.reply_url || ''}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Pulso-Key': env.PULSO_SITE_KEY },
+        body: JSON.stringify({ contact_id: email.data?.contact_id, message: msg })
+      });
+      return json({ ok: true, output: `\x1b[32m✓ Reply enviado para ${email.data?.from}\x1b[0m` });
+    } catch(e) {
+      return json({ ok: true, output: `\x1b[31mErro ao enviar: ${e.message}\x1b[0m` });
+    }
+  }
+
+  if (command === 'wp') {
+    // wp <site> <subcommand>
+    const site = args[0]; const sub = args[1];
+    if (!site) return json({ ok: true, output: 'Uso: wp <site> <posts|orders|plugins|option get/set>\nSites: concursos, benfazeja, wellsouza, luasites' });
+    const siteUrl = siteUrls[site];
+    if (!siteUrl) return json({ ok: true, output: `Site desconhecido: ${site}` });
+    const creds = JSON.parse(await env.PULSO_KV.get(`wp_creds_${site}`) || 'null');
+    if (!creds) return json({ ok: true, output: `\x1b[33mCredenciais não configuradas para ${site}.\x1b[0m\nRode: wp-auth ${site} <user> <app-password>` });
+
+    const auth = 'Basic ' + btoa(`${creds.user}:${creds.pass}`);
+    if (sub === 'posts' || sub === 'list') {
+      const r = await fetch(`${siteUrl}/wp-json/wp/v2/posts?per_page=5&status=publish`, { headers: { Authorization: auth } });
+      const posts = await r.json();
+      if (!Array.isArray(posts)) return json({ ok: true, output: JSON.stringify(posts) });
+      const out = posts.map((p, i) => `\x1b[33m${i+1}.\x1b[0m ${p.title?.rendered}\n   \x1b[90m${p.link}\x1b[0m`).join('\n');
+      return json({ ok: true, output: out || 'Nenhum post.' });
+    }
+    if (sub === 'orders') {
+      const r = await fetch(`${siteUrl}/wp-json/wc/v3/orders?per_page=5`, { headers: { Authorization: auth } });
+      const orders = await r.json();
+      if (!Array.isArray(orders)) return json({ ok: true, output: 'WooCommerce não instalado ou sem permissão.' });
+      const out = orders.map((o, i) => `\x1b[33m#${o.id}\x1b[0m ${o.billing?.first_name} ${o.billing?.last_name} — R$${o.total} [\x1b[36m${o.status}\x1b[0m]`).join('\n');
+      return json({ ok: true, output: out || 'Nenhum pedido.' });
+    }
+    if (sub === 'plugins') {
+      const r = await fetch(`${siteUrl}/wp-json/wp/v2/plugins?per_page=50`, { headers: { Authorization: auth } });
+      const plugins = await r.json();
+      if (!Array.isArray(plugins)) return json({ ok: true, output: 'Sem acesso a plugins via REST.' });
+      const active = plugins.filter(p => p.status === 'active');
+      return json({ ok: true, output: `${active.length} plugins ativos:\n` + active.map(p => `  \x1b[32m●\x1b[0m ${p.name}`).join('\n') });
+    }
+    if (sub === 'option' && args[2] === 'get') {
+      const r = await fetch(`${siteUrl}/wp-json/wp/v2/settings`, { headers: { Authorization: auth } });
+      const s = await r.json();
+      return json({ ok: true, output: JSON.stringify(s, null, 2) });
+    }
+    return json({ ok: true, output: `Subcomando desconhecido: ${sub}\nDisponíveis: posts, orders, plugins, option get` });
+  }
+
+  if (command === 'wp-auth') {
+    // wp-auth <site> <user> <app-password>
+    const [site, user, ...passParts] = args;
+    const pass = passParts.join(' ');
+    if (!site || !user || !pass) return json({ ok: true, output: 'Uso: wp-auth <site> <usuario> <app-password>\nCrie em: WP Admin → Usuários → Senhas de aplicativo' });
+    await env.PULSO_KV.put(`wp_creds_${site}`, JSON.stringify({ user, pass }));
+    return json({ ok: true, output: `\x1b[32m✓ Credenciais salvas para ${site}\x1b[0m` });
+  }
+
+  if (command === 'tasks') {
+    const tasks = JSON.parse(await env.PULSO_KV.get('tasks') || '[]');
+    if (!tasks.length) return json({ ok: true, output: 'Nenhuma tarefa.' });
+    const out = tasks.map((t, i) =>
+      `${t.done ? '\x1b[32m✓\x1b[0m' : '\x1b[90m○\x1b[0m'} \x1b[33m[${i}]\x1b[0m ${t.done ? '\x1b[90m' + t.text + '\x1b[0m' : t.text}`
+    ).join('\n');
+    return json({ ok: true, output: out });
+  }
+
+  if (command === 'task') {
+    const sub = args[0];
+    if (sub === 'add') {
+      const text = args.slice(1).join(' ');
+      if (!text) return json({ ok: true, output: 'Uso: task add <texto>' });
+      const tasks = JSON.parse(await env.PULSO_KV.get('tasks') || '[]');
+      tasks.push({ text, done: false, created: Date.now() });
+      await env.PULSO_KV.put('tasks', JSON.stringify(tasks));
+      return json({ ok: true, output: `\x1b[32m✓ Tarefa adicionada: ${text}\x1b[0m` });
+    }
+    if (sub === 'done') {
+      const idx = parseInt(args[1]);
+      const tasks = JSON.parse(await env.PULSO_KV.get('tasks') || '[]');
+      if (!tasks[idx]) return json({ ok: true, output: `Tarefa ${idx} não encontrada.` });
+      tasks[idx].done = true;
+      await env.PULSO_KV.put('tasks', JSON.stringify(tasks));
+      return json({ ok: true, output: `\x1b[32m✓ ${tasks[idx].text}\x1b[0m` });
+    }
+    return json({ ok: true, output: 'Subcomandos: task add <texto> | task done <índice>' });
+  }
+
+  if (command === 'deploy') {
+    return json({ ok: true, output: '\x1b[33mDeploy deve ser rodado na VPS:\x1b[0m\ncd /var/www/pulso && source .env.deploy && bash deploy.sh' });
+  }
+
+  // Fallback: Gemini interpreta comando desconhecido
+  const geminiOutput = await callGeminiTerminal(cmd, history || [], env);
+  return json({ ok: true, output: geminiOutput });
+}
+
+async function handleEmailReply(request, env) {
+  const { site, contact_id, message, subject } = await request.json();
+  const key = request.headers.get('X-Pulso-Key');
+  if (key !== env.PULSO_SITE_KEY) return json({ ok: false }, 401);
+  // Store reply intent in KV for the site to pick up
+  const replies = JSON.parse(await env.PULSO_KV.get('pending_replies') || '[]');
+  replies.push({ site, contact_id, message, subject, created: Date.now() });
+  await env.PULSO_KV.put('pending_replies', JSON.stringify(replies));
+  return json({ ok: true });
+}
+
+async function callGeminiTerminal(cmd, history, env) {
+  const sysPrompt = `Você é o shell do Pulso — terminal inteligente de Well Souza.
+Responda como um terminal Unix: saída direta, sem markdown, sem explicações longas.
+Use ANSI escape codes para cor quando útil (\x1b[32m para verde, \x1b[33m amarelo, \x1b[31m vermelho, \x1b[0m reset).
+Comandos disponíveis via API: status, feed, emails, reply, wp, tasks, task, help, clear.
+Se o comando for ambíguo, sugira o comando correto.
+Resposta máxima: 20 linhas.`;
+
+  const messages = [
+    ...history.slice(-6).map(h => ({ role: h.role, parts: [{ text: h.text }] })),
+    { role: 'user', parts: [{ text: cmd }] }
+  ];
+
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${env.GEMINI_KEY}`,
+    { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ system_instruction: { parts: [{ text: sysPrompt }] }, contents: messages }) }
+  );
+  const data = await res.json();
+  return data.candidates?.[0]?.content?.parts?.[0]?.text || '(sem resposta)';
+}
+
+const siteUrls = {
+  concursos: 'https://concursosliterarios.net.br',
+  benfazeja: 'https://benfazeja.com.br',
+  wellsouza: 'https://wellsouza.com.br',
+  luasites:  'https://luasites.com.br'
+};
+
+const HELP_TEXT = `\x1b[32m╔══════════════════════════════════╗
+║        PULSO TERMINAL v1         ║
+╚══════════════════════════════════╝\x1b[0m
+
+\x1b[33mSISTEMA\x1b[0m
+  status              — estado geral
+  feed [n]            — últimos n eventos dos sites
+  clear               — limpar tela
+
+\x1b[33mTAREFAS\x1b[0m
+  tasks               — listar tarefas
+  task add <texto>    — nova tarefa
+  task done <idx>     — marcar concluída
+
+\x1b[33mEMAIL\x1b[0m
+  emails              — emails recentes
+  reply <id> <msg>    — responder email
+
+\x1b[33mWORDPRESS\x1b[0m
+  wp <site> posts     — posts recentes
+  wp <site> orders    — pedidos WooCommerce
+  wp <site> plugins   — plugins ativos
+  wp-auth <site> <user> <pass>  — configurar acesso
+
+  Sites: concursos · benfazeja · wellsouza · luasites
+
+\x1b[33mIA\x1b[0m
+  Qualquer outro texto → Gemini responde como terminal
+
+\x1b[90mDica: setas ↑↓ para histórico, Tab para completar\x1b[0m`;
 
 // ── Morning Briefing ──────────────────────────────────────────────
 async function sendMorningBriefing(env) {

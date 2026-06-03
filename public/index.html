@@ -8,6 +8,8 @@
   <meta name="theme-color" content="#0a0a0a"/>
   <title>Pulso</title>
   <link rel="manifest" href="/manifest.json"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
   <style>
   *{box-sizing:border-box;margin:0;padding:0}
   :root{
@@ -127,6 +129,21 @@
   .toggle::after{content:'';position:absolute;width:18px;height:18px;background:white;border-radius:50%;top:3px;left:3px;transition:left .2s}
   .toggle.on::after{left:23px}
 
+  /* ── TERMINAL ── */
+  #terminal-view{padding:0;background:#0d1117;flex-direction:column}
+  #terminal-output{flex:1;overflow-y:auto;padding:12px 14px;font-family:'JetBrains Mono','Fira Code','Cascadia Code',Menlo,monospace;font-size:13px;line-height:1.6;color:#e6edf3;word-break:break-word}
+  .t-line{white-space:pre-wrap;animation:fadeUp .1s ease}
+  .t-prompt{color:#7ee787}
+  .t-cmd{color:#e6edf3}
+  .t-output{color:#cdd9e5}
+  .t-error{color:#f85149}
+  .t-info{color:#79c0ff}
+  #terminal-input-row{display:flex;align-items:center;padding:8px 14px calc(var(--safe-bottom) + 8px);border-top:1px solid #21262d;flex-shrink:0;gap:8px;background:#0d1117}
+  #terminal-prompt-label{color:#7ee787;font-family:'JetBrains Mono',monospace;font-size:13px;white-space:nowrap;flex-shrink:0}
+  #terminal-input{flex:1;background:none;border:none;outline:none;color:#e6edf3;font-family:'JetBrains Mono',monospace;font-size:13px;caret-color:#7ee787}
+  #terminal-input::placeholder{color:#484f58}
+  .t-separator{color:#30363d;margin:4px 0}
+
   /* ── SETTINGS ── */
   #settings-view{padding:20px;gap:0}
   .s-section{margin-bottom:24px}
@@ -196,7 +213,8 @@
 <div class="tabs">
   <div class="tab active" id="tab-dia" onclick="showTab('dia')">☀️ Dia</div>
   <div class="tab" id="tab-chat" onclick="showTab('chat')">💬 Chat</div>
-  <div class="tab" id="tab-player" onclick="showTab('player')">🎵 Player</div>
+  <div class="tab" id="tab-terminal" onclick="showTab('terminal')">⌨ Terminal</div>
+  <div class="tab" id="tab-player" onclick="showTab('player')">🎵</div>
   <div class="tab" id="tab-settings" onclick="showTab('settings')">⚙</div>
 </div>
 
@@ -278,6 +296,15 @@
     <button id="send-btn" onclick="sendMessage()">
       <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
     </button>
+  </div>
+</div>
+
+<!-- Terminal View -->
+<div class="view" id="terminal-view">
+  <div id="terminal-output"></div>
+  <div id="terminal-input-row">
+    <div id="terminal-prompt-label">well@pulso:~$</div>
+    <input type="text" id="terminal-input" placeholder="digite um comando..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
   </div>
 </div>
 
@@ -780,6 +807,119 @@ document.getElementById('user-input').addEventListener('keydown', function(e) {
   if (e.key==='Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
 });
 
+// ── Terminal ──────────────────────────────────────────────────────
+let termHistory = [];
+let termHistIdx = -1;
+let termCmdHistory = [];
+
+function initTerminal() {
+  const input = document.getElementById('terminal-input');
+  input.addEventListener('keydown', onTerminalKey);
+  termPrint('info', 'Pulso Terminal v1.0 — digite \x1b[33mhelp\x1b[0m para ver comandos');
+  termPrint('separator', '─'.repeat(42));
+}
+
+function onTerminalKey(e) {
+  if (e.key === 'Enter') {
+    const cmd = e.target.value.trim();
+    e.target.value = '';
+    termHistIdx = -1;
+    if (!cmd) return;
+    termCmdHistory.unshift(cmd);
+    if (termCmdHistory.length > 50) termCmdHistory.pop();
+    termPrintPrompt(cmd);
+    runTerminalCmd(cmd);
+  }
+  if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    if (termHistIdx < termCmdHistory.length - 1) {
+      termHistIdx++;
+      e.target.value = termCmdHistory[termHistIdx] || '';
+    }
+  }
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    if (termHistIdx > 0) { termHistIdx--; e.target.value = termCmdHistory[termHistIdx]; }
+    else { termHistIdx = -1; e.target.value = ''; }
+  }
+  if (e.key === 'Tab') {
+    e.preventDefault();
+    const val = e.target.value;
+    const cmds = ['help','clear','status','feed','emails','reply','wp','wp-auth','tasks','task','deploy'];
+    const match = cmds.find(c => c.startsWith(val));
+    if (match) e.target.value = match + ' ';
+  }
+}
+
+async function runTerminalCmd(cmd) {
+  // Client-side: clear
+  if (cmd === 'clear') {
+    document.getElementById('terminal-output').innerHTML = '';
+    return;
+  }
+
+  try {
+    const res = await fetch('/api/terminal', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cmd, history: termHistory.slice(-6) })
+    });
+    const data = await res.json();
+    if (data.clear) { document.getElementById('terminal-output').innerHTML = ''; return; }
+    if (data.output) termPrint('output', data.output);
+    termHistory.push({ role: 'user', text: cmd });
+    if (data.output) termHistory.push({ role: 'model', text: data.output });
+  } catch(e) {
+    termPrint('error', 'Erro de conexão: ' + e.message);
+  }
+
+  termPrint('separator', '');
+  // Auto-scroll
+  const out = document.getElementById('terminal-output');
+  out.scrollTop = out.scrollHeight;
+}
+
+function termPrintPrompt(cmd) {
+  const out = document.getElementById('terminal-output');
+  const div = document.createElement('div');
+  div.className = 't-line';
+  div.innerHTML = `<span class="t-prompt">well@pulso:~$</span> <span class="t-cmd">${escHtml(cmd)}</span>`;
+  out.appendChild(div);
+}
+
+function termPrint(type, text) {
+  const out = document.getElementById('terminal-output');
+  if (type === 'separator' && !text) {
+    const div = document.createElement('div');
+    div.style.height = '4px';
+    out.appendChild(div);
+    return;
+  }
+  // Parse ANSI codes to HTML
+  const html = ansiToHtml(text);
+  const div = document.createElement('div');
+  div.className = 't-line t-' + type;
+  div.innerHTML = html;
+  out.appendChild(div);
+  out.scrollTop = out.scrollHeight;
+}
+
+function ansiToHtml(text) {
+  return escHtml(text)
+    .replace(/\x1b\[0m/g,  '</span>')
+    .replace(/\x1b\[32m/g, '<span style="color:#7ee787">')
+    .replace(/\x1b\[33m/g, '<span style="color:#e3b341">')
+    .replace(/\x1b\[31m/g, '<span style="color:#f85149">')
+    .replace(/\x1b\[36m/g, '<span style="color:#79c0ff">')
+    .replace(/\x1b\[37m/g, '<span style="color:#e6edf3">')
+    .replace(/\x1b\[90m/g, '<span style="color:#6e7681">')
+    .replace(/\x1b\[\d+m/g, '');
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
 // ── Service Worker ────────────────────────────────────────────────
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/sw.js').catch(() => {});
@@ -1032,8 +1172,9 @@ if (S.get('pulso_auth') === '1') {
   if (!S.get('yt_api_key')) S.set('yt_api_key', DEFAULT_YT_KEY);
   init();
   initDia();
-  // Open on ?tab=dia from push notification
+  initTerminal();
   if (location.search.includes('tab=dia')) showTab('dia');
+  if (location.search.includes('tab=terminal')) showTab('terminal');
 }
 </script>
 </body>
