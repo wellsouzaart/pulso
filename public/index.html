@@ -8,265 +8,140 @@
   <meta name="theme-color" content="#0a0a0a" />
   <title>Pulso</title>
   <link rel="manifest" href="/manifest.json" />
-  <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+  <link rel="apple-touch-icon" href="/icons/icon-192.svg" />
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-
     :root {
-      --bg: #0a0a0a;
-      --surface: #141414;
-      --border: #222;
-      --accent: #7c6af7;
-      --accent-dim: #3d3580;
-      --text: #f0f0f0;
-      --muted: #666;
+      --bg: #0a0a0a; --surface: #141414; --border: #222;
+      --accent: #7c6af7; --accent-dim: #3d3580;
+      --text: #f0f0f0; --muted: #666;
       --safe-top: env(safe-area-inset-top, 0px);
       --safe-bottom: env(safe-area-inset-bottom, 0px);
     }
+    body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; height: 100dvh; display: flex; flex-direction: column; overflow: hidden; }
 
-    body {
-      background: var(--bg);
-      color: var(--text);
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      height: 100dvh;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-    }
-
-    /* Header */
-    header {
-      padding: calc(var(--safe-top) + 12px) 20px 12px;
-      border-bottom: 1px solid var(--border);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      flex-shrink: 0;
-    }
-    .logo {
-      font-size: 22px;
-      font-weight: 700;
-      letter-spacing: -0.5px;
-      color: var(--accent);
-    }
+    header { padding: calc(var(--safe-top) + 12px) 16px 12px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; gap: 8px; }
+    .logo { font-size: 20px; font-weight: 800; color: var(--accent); letter-spacing: -0.5px; flex-shrink: 0; }
     .logo span { color: var(--text); }
-    .model-badge {
-      font-size: 11px;
-      color: var(--muted);
-      background: var(--surface);
-      border: 1px solid var(--border);
-      padding: 3px 8px;
-      border-radius: 20px;
-    }
 
-    /* Messages */
-    #messages {
-      flex: 1;
-      overflow-y: auto;
-      padding: 20px 16px;
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-      scroll-behavior: smooth;
-    }
+    /* Connected APIs pills */
+    .apis { display: flex; gap: 6px; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+    .apis::-webkit-scrollbar { display: none; }
+    .api-pill { font-size: 10px; padding: 3px 8px; border-radius: 20px; border: 1px solid var(--border); color: var(--muted); white-space: nowrap; cursor: pointer; transition: all 0.15s; }
+    .api-pill.connected { border-color: #2d6a4f; color: #52b788; background: #0d2318; }
+    .api-pill.active { border-color: var(--accent); color: var(--accent); background: #1a1630; }
 
-    .msg {
-      max-width: 88%;
-      line-height: 1.55;
-      font-size: 15px;
-      animation: fadeUp 0.2s ease;
-    }
-    @keyframes fadeUp {
-      from { opacity: 0; transform: translateY(6px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
+    #messages { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 14px; scroll-behavior: smooth; }
+    .msg { max-width: 90%; line-height: 1.55; font-size: 15px; animation: fadeUp 0.2s ease; }
+    @keyframes fadeUp { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
+    .msg.user { align-self: flex-end; background: var(--accent-dim); border-radius: 18px 18px 4px 18px; padding: 10px 14px; }
+    .msg.ai { align-self: flex-start; background: var(--surface); border: 1px solid var(--border); border-radius: 4px 18px 18px 18px; padding: 12px 14px; }
+    .msg.system { align-self: center; color: var(--muted); font-size: 12px; text-align: center; }
 
-    .msg.user {
-      align-self: flex-end;
-      background: var(--accent-dim);
-      border-radius: 18px 18px 4px 18px;
-      padding: 10px 14px;
-    }
-    .msg.ai {
-      align-self: flex-start;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 4px 18px 18px 18px;
-      padding: 12px 14px;
-    }
-    .msg.system {
-      align-self: center;
-      color: var(--muted);
-      font-size: 13px;
-      text-align: center;
-    }
+    /* Action cards (playlists, apps, etc) */
+    .action-card { background: var(--surface); border: 1px solid var(--accent-dim); border-radius: 12px; padding: 14px; margin-top: 8px; }
+    .action-card h3 { font-size: 14px; color: var(--accent); margin-bottom: 6px; }
+    .action-card p { font-size: 13px; color: var(--muted); margin-bottom: 10px; }
+    .btn { display: inline-block; background: var(--accent); color: white; padding: 7px 14px; border-radius: 8px; text-decoration: none; font-size: 13px; font-weight: 600; border: none; cursor: pointer; margin-right: 6px; margin-top: 4px; }
+    .btn.secondary { background: var(--surface); border: 1px solid var(--border); color: var(--text); }
 
-    /* App cards gerados */
-    .app-card {
-      background: var(--surface);
-      border: 1px solid var(--accent-dim);
-      border-radius: 12px;
-      padding: 14px;
-      margin-top: 10px;
-    }
-    .app-card h3 { font-size: 15px; margin-bottom: 6px; color: var(--accent); }
-    .app-card p  { font-size: 13px; color: var(--muted); margin-bottom: 10px; }
-    .app-card a  {
-      display: inline-block;
-      background: var(--accent);
-      color: white;
-      padding: 7px 14px;
-      border-radius: 8px;
-      text-decoration: none;
-      font-size: 13px;
-      font-weight: 600;
-    }
+    pre { background: #0d0d0d; border: 1px solid var(--border); border-radius: 8px; padding: 10px; overflow-x: auto; font-size: 12px; margin-top: 6px; white-space: pre-wrap; word-break: break-word; }
 
-    /* Code blocks */
-    pre {
-      background: #0d0d0d;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 12px;
-      overflow-x: auto;
-      font-size: 12px;
-      margin-top: 8px;
-      white-space: pre-wrap;
-      word-break: break-word;
-    }
-
-    /* Typing indicator */
-    .typing {
-      display: flex;
-      gap: 4px;
-      align-items: center;
-      padding: 12px 14px;
-    }
-    .typing span {
-      width: 6px; height: 6px;
-      background: var(--accent);
-      border-radius: 50%;
-      animation: pulse 1.2s infinite;
-    }
+    .typing { display: flex; gap: 4px; align-items: center; padding: 10px 14px; }
+    .typing span { width: 6px; height: 6px; background: var(--accent); border-radius: 50%; animation: pulse 1.2s infinite; }
     .typing span:nth-child(2) { animation-delay: 0.2s; }
     .typing span:nth-child(3) { animation-delay: 0.4s; }
-    @keyframes pulse {
-      0%, 60%, 100% { opacity: 0.3; transform: scale(1); }
-      30% { opacity: 1; transform: scale(1.3); }
-    }
+    @keyframes pulse { 0%,60%,100% { opacity:0.3; transform:scale(1); } 30% { opacity:1; transform:scale(1.3); } }
 
-    /* Input area */
-    #input-area {
-      padding: 12px 16px calc(var(--safe-bottom) + 12px);
-      border-top: 1px solid var(--border);
-      display: flex;
-      gap: 10px;
-      align-items: flex-end;
-      flex-shrink: 0;
-      background: var(--bg);
-    }
-    #user-input {
-      flex: 1;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 20px;
-      padding: 10px 16px;
-      color: var(--text);
-      font-size: 15px;
-      resize: none;
-      max-height: 120px;
-      outline: none;
-      line-height: 1.4;
-    }
+    #input-area { padding: 10px 16px calc(var(--safe-bottom) + 10px); border-top: 1px solid var(--border); display: flex; gap: 8px; align-items: flex-end; flex-shrink: 0; background: var(--bg); }
+    #user-input { flex: 1; background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 10px 16px; color: var(--text); font-size: 15px; resize: none; max-height: 120px; outline: none; line-height: 1.4; }
     #user-input:focus { border-color: var(--accent); }
     #user-input::placeholder { color: var(--muted); }
-
-    #send-btn {
-      width: 40px; height: 40px;
-      background: var(--accent);
-      border: none;
-      border-radius: 50%;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-      transition: opacity 0.15s;
-    }
-    #send-btn:disabled { opacity: 0.4; cursor: default; }
+    #send-btn { width: 40px; height: 40px; background: var(--accent); border: none; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: opacity 0.15s; }
+    #send-btn:disabled { opacity: 0.4; }
     #send-btn svg { fill: white; width: 18px; height: 18px; }
 
-    /* Setup screen */
-    #setup-screen {
-      position: fixed; inset: 0;
-      background: var(--bg);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 40px 24px;
-      gap: 20px;
-      z-index: 100;
-    }
-    #setup-screen h1 { font-size: 32px; color: var(--accent); font-weight: 800; }
-    #setup-screen p  { color: var(--muted); text-align: center; font-size: 15px; line-height: 1.5; }
-    #setup-screen input {
-      width: 100%;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 14px 16px;
-      color: var(--text);
-      font-size: 16px;
-      outline: none;
-    }
-    #setup-screen input:focus { border-color: var(--accent); }
-    #setup-screen button {
-      width: 100%;
-      background: var(--accent);
-      color: white;
-      border: none;
-      border-radius: 12px;
-      padding: 14px;
-      font-size: 16px;
-      font-weight: 700;
-      cursor: pointer;
-    }
-    #setup-screen .hint {
-      font-size: 12px;
-      color: var(--muted);
-      text-align: center;
-    }
-    #setup-screen a { color: var(--accent); }
+    /* Setup */
+    #setup { position: fixed; inset: 0; background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 24px; gap: 18px; z-index: 100; }
+    #setup h1 { font-size: 36px; font-weight: 800; color: var(--accent); }
+    #setup p { color: var(--muted); text-align: center; font-size: 14px; line-height: 1.6; }
+    #setup input { width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; color: var(--text); font-size: 16px; outline: none; }
+    #setup input:focus { border-color: var(--accent); }
+    #setup button { width: 100%; background: var(--accent); color: white; border: none; border-radius: 12px; padding: 14px; font-size: 16px; font-weight: 700; cursor: pointer; }
+    #setup .hint { font-size: 12px; color: var(--muted); text-align: center; }
+    #setup a { color: var(--accent); }
+
+    /* Settings panel */
+    #settings-panel { position: fixed; inset: 0; background: var(--bg); z-index: 50; display: none; flex-direction: column; padding: calc(var(--safe-top) + 16px) 20px 20px; overflow-y: auto; }
+    #settings-panel.open { display: flex; }
+    #settings-panel h2 { font-size: 18px; font-weight: 700; margin-bottom: 20px; }
+    .settings-section { margin-bottom: 24px; }
+    .settings-section h3 { font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin-bottom: 10px; }
+    .settings-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--border); }
+    .settings-row label { font-size: 14px; }
+    .settings-row span { font-size: 12px; color: var(--muted); }
+    .settings-input { width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; color: var(--text); font-size: 14px; margin-top: 6px; outline: none; }
+    .close-btn { align-self: flex-end; background: none; border: 1px solid var(--border); color: var(--text); padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 14px; margin-bottom: 16px; }
   </style>
 </head>
 <body>
 
-<!-- Setup screen (shown if no API key) -->
-<div id="setup-screen">
+<!-- Setup screen -->
+<div id="setup">
   <h1>Pulso</h1>
-  <p>Seu assistente pessoal para criar apps, rastrear sua vida e alcançar seus objetivos.</p>
-  <input type="password" id="api-key-input" placeholder="Cole sua chave OpenRouter sk-or-..." autocomplete="off" />
-  <button onclick="saveKey()">Entrar</button>
-  <p class="hint">Chave salva localmente no seu dispositivo.<br/>Obtenha em <a href="https://openrouter.ai/keys" target="_blank">openrouter.ai/keys</a></p>
+  <p>Assistente pessoal conectado às suas APIs.<br/>Playlists, objetivos, apps e mais.</p>
+  <input type="password" id="gemini-key-input" placeholder="Chave Gemini (AIza...)" autocomplete="off" />
+  <button onclick="saveSetup()">Entrar</button>
+  <p class="hint">Chave salva só no seu dispositivo.<br/>Obtenha grátis em <a href="https://aistudio.google.com/apikey" target="_blank">aistudio.google.com/apikey</a></p>
 </div>
 
-<!-- Main app -->
+<!-- Settings panel -->
+<div id="settings-panel">
+  <button class="close-btn" onclick="toggleSettings()">← Fechar</button>
+  <h2>Configurações</h2>
+
+  <div class="settings-section">
+    <h3>Gemini API</h3>
+    <input class="settings-input" type="password" id="s-gemini" placeholder="AIza..." />
+  </div>
+
+  <div class="settings-section">
+    <h3>YouTube / Google</h3>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:10px;">Para criar e gerenciar playlists, buscar vídeos, etc.</p>
+    <div id="yt-auth-area">
+      <button class="btn" onclick="connectGoogle()">Conectar conta Google</button>
+    </div>
+  </div>
+
+  <div class="settings-section">
+    <h3>Spotify (em breve)</h3>
+    <div class="settings-row"><label>Conectar Spotify</label><span>→</span></div>
+  </div>
+
+  <div class="settings-section">
+    <h3>Sobre</h3>
+    <div class="settings-row"><label>Versão</label><span>0.1.0</span></div>
+    <div class="settings-row"><label>Modelo</label><span>Gemini 2.0 Flash</span></div>
+  </div>
+
+  <button class="btn" onclick="saveSettings()" style="width:100%;margin-top:10px;">Salvar</button>
+  <button class="btn secondary" onclick="clearAll()" style="width:100%;margin-top:10px;">Apagar dados locais</button>
+</div>
+
+<!-- Main -->
 <header>
   <div class="logo">Pul<span>so</span></div>
-  <div class="model-badge" id="model-label">claude-3.5-sonnet</div>
+  <div class="apis" id="api-pills">
+    <div class="api-pill" id="pill-gemini">✦ Gemini</div>
+    <div class="api-pill" id="pill-youtube" onclick="connectGoogle()">▶ YouTube</div>
+    <div class="api-pill" id="pill-gcal">📅 Agenda</div>
+    <div class="api-pill" onclick="toggleSettings()">⚙</div>
+  </div>
 </header>
 
 <div id="messages">
-  <div class="msg system">Hoje, <span id="today-date"></span></div>
-  <div class="msg ai">
-    Olá! Sou o Pulso — seu assistente de vida e criador de apps.<br/><br/>
-    Posso te ajudar a:<br/>
-    • 🛠 Criar um novo app (me descreva a ideia)<br/>
-    • 🎯 Acompanhar seus objetivos (2027, 2030, aposentadoria)<br/>
-    • 💡 Explorar ideias e projetos pessoais<br/><br/>
-    O que vamos construir?
-  </div>
+  <div class="msg system" id="today-label"></div>
+  <div class="msg ai">Olá! Sou o Pulso 👋<br/><br/>Posso te ajudar com:<br/>• 🎵 Criar e gerenciar playlists no YouTube<br/>• 🎯 Seus objetivos (2027, 2030, aposentadoria)<br/>• 🛠 Criar mini-apps<br/>• 📅 Ver sua agenda Google<br/><br/>O que fazemos?</div>
 </div>
 
 <div id="input-area">
@@ -277,44 +152,180 @@
 </div>
 
 <script>
-const SYSTEM_PROMPT = `Você é o Pulso — assistente pessoal de Well Souza.
+// ── Storage helpers ──────────────────────────────────────────────
+const S = {
+  get: k => { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } },
+  set: (k, v) => localStorage.setItem(k, JSON.stringify(v)),
+  del: k => localStorage.removeItem(k)
+};
 
-Você tem dois modos:
-
-1. CRIADOR DE APPS: Quando o usuário pede para criar um app, você gera um HTML completo e autocontido (CSS + JS embutidos) que funciona perfeitamente em mobile. O app deve ser bonito, moderno e funcional. Ao final, envolva o HTML completo em uma tag <APP_HTML> assim:
-<APP_HTML nome="nome-do-app" titulo="Título do App">
-<!DOCTYPE html>...código completo...</APP_HTML>
-
-2. ASSISTENTE PESSOAL: Para objetivos, ideias e reflexões. Seja direto, perspicaz e útil.
-
-O usuário acessa pelo celular. Prefira respostas curtas e diretas. Em PT-BR.`;
-
+// ── State ────────────────────────────────────────────────────────
 let messages = [];
 let isLoading = false;
+let googleToken = null;
 
-// Setup
-function saveKey() {
-  const key = document.getElementById('api-key-input').value.trim();
-  if (!key.startsWith('sk-or-')) {
-    alert('Chave inválida. Deve começar com sk-or-');
-    return;
-  }
-  localStorage.setItem('pulso_key', key);
-  document.getElementById('setup-screen').style.display = 'none';
+const GEMINI_MODEL = 'gemini-2.0-flash';
+const GEMINI_API = 'https://generativelanguage.googleapis.com/v1beta/models/' + GEMINI_MODEL + ':generateContent';
+
+const SYSTEM_PROMPT = `Você é o Pulso — assistente pessoal de Well Souza.
+
+Você tem acesso às seguintes capacidades (quando o usuário autorizar):
+- YouTube Data API: criar playlists, adicionar vídeos, buscar conteúdo
+- Google Calendar: ver e criar eventos
+- Criar mini-apps HTML completos
+
+CRIADOR DE APPS: Quando pedirem um app, gere HTML completo autocontido. Envolva assim:
+<APP_HTML nome="slug-do-app" titulo="Título"><!DOCTYPE html>...</APP_HTML>
+
+PLAYLISTS: Quando pedirem playlist do YouTube, responda com JSON de ação assim:
+<YT_ACTION type="create_playlist">{"title":"Nome","description":"Desc","privacy":"private"}</YT_ACTION>
+Para adicionar vídeo:
+<YT_ACTION type="add_video">{"playlistId":"ID","videoId":"VIDEO_ID"}</YT_ACTION>
+Para buscar vídeos:
+<YT_ACTION type="search">{"q":"termo de busca","maxResults":5}</YT_ACTION>
+
+Seja direto e útil. Respostas curtas no celular. PT-BR.`;
+
+// ── Setup ────────────────────────────────────────────────────────
+function saveSetup() {
+  const key = document.getElementById('gemini-key-input').value.trim();
+  if (!key.startsWith('AIza')) { alert('Chave inválida. Deve começar com AIza'); return; }
+  S.set('gemini_key', key);
+  document.getElementById('setup').style.display = 'none';
   init();
 }
 
-function getKey() {
-  return localStorage.getItem('pulso_key');
-}
-
 function init() {
-  if (!getKey()) return;
-  document.getElementById('setup-screen').style.display = 'none';
-  document.getElementById('today-date').textContent = new Date().toLocaleDateString('pt-BR', {weekday:'long', day:'numeric', month:'long'});
+  if (!S.get('gemini_key')) return;
+  document.getElementById('setup').style.display = 'none';
+  document.getElementById('today-label').textContent = new Date().toLocaleDateString('pt-BR', {weekday:'long', day:'numeric', month:'long'});
+  document.getElementById('pill-gemini').classList.add('connected');
+  googleToken = S.get('google_token');
+  if (googleToken) {
+    document.getElementById('pill-youtube').classList.add('connected');
+    document.getElementById('pill-gcal').classList.add('connected');
+  }
 }
 
-// Messaging
+// ── Settings ─────────────────────────────────────────────────────
+function toggleSettings() {
+  const p = document.getElementById('settings-panel');
+  p.classList.toggle('open');
+  if (p.classList.contains('open')) {
+    document.getElementById('s-gemini').value = S.get('gemini_key') || '';
+  }
+}
+
+function saveSettings() {
+  const key = document.getElementById('s-gemini').value.trim();
+  if (key) S.set('gemini_key', key);
+  toggleSettings();
+  init();
+}
+
+function clearAll() {
+  if (confirm('Apagar todos os dados locais?')) { localStorage.clear(); location.reload(); }
+}
+
+// ── Google OAuth ──────────────────────────────────────────────────
+// Uses implicit flow — token stored locally, no server needed
+const GOOGLE_CLIENT_ID = ''; // user must set in settings — or use device OAuth
+function connectGoogle() {
+  // Check if client ID configured
+  const cid = S.get('google_client_id');
+  if (!cid) {
+    addMessage('ai', `Para conectar o Google, precisamos configurar o OAuth. Por enquanto, você pode usar a chave de API do YouTube para buscas.\n\nEm breve terei o fluxo completo de login aqui. Quer que eu crie uma playlist demo com vídeos que você me indicar?`);
+    return;
+  }
+  const params = new URLSearchParams({
+    client_id: cid,
+    redirect_uri: window.location.origin,
+    response_type: 'token',
+    scope: 'https://www.googleapis.com/auth/youtube https://www.googleapis.com/auth/calendar',
+    prompt: 'consent'
+  });
+  window.location.href = 'https://accounts.google.com/o/oauth2/v2/auth?' + params;
+}
+
+// Handle OAuth redirect token
+function handleOAuthRedirect() {
+  const hash = new URLSearchParams(window.location.hash.slice(1));
+  const token = hash.get('access_token');
+  if (token) {
+    S.set('google_token', token);
+    googleToken = token;
+    window.history.replaceState({}, '', window.location.pathname);
+    document.getElementById('pill-youtube').classList.add('connected');
+    document.getElementById('pill-gcal').classList.add('connected');
+    addMessage('ai', '✅ Google conectado! Já posso criar playlists no YouTube e ver sua agenda.');
+  }
+}
+
+// ── Gemini API ────────────────────────────────────────────────────
+async function callGemini(userText) {
+  const key = S.get('gemini_key');
+  const history = messages.slice(-12).map(m => ({
+    role: m.role === 'user' ? 'user' : 'model',
+    parts: [{ text: m.content }]
+  }));
+
+  const body = {
+    system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
+    contents: [...history, { role: 'user', parts: [{ text: userText }] }],
+    generationConfig: { maxOutputTokens: 4096, temperature: 0.9 }
+  };
+
+  const res = await fetch(GEMINI_API + '?key=' + key, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
+  });
+  if (!res.ok) {
+    const e = await res.json();
+    throw new Error(e.error?.message || 'Erro Gemini');
+  }
+  const data = await res.json();
+  return data.candidates?.[0]?.content?.parts?.[0]?.text || '(sem resposta)';
+}
+
+// ── YouTube Actions ───────────────────────────────────────────────
+async function executeYTAction(type, payload) {
+  if (!googleToken) {
+    return '⚠️ YouTube não conectado. Clique em "▶ YouTube" no topo para conectar.';
+  }
+  const base = 'https://www.googleapis.com/youtube/v3';
+  const headers = { Authorization: 'Bearer ' + googleToken, 'Content-Type': 'application/json' };
+
+  if (type === 'create_playlist') {
+    const res = await fetch(base + '/playlists?part=snippet,status', {
+      method: 'POST', headers,
+      body: JSON.stringify({ snippet: { title: payload.title, description: payload.description || '' }, status: { privacyStatus: payload.privacy || 'private' } })
+    });
+    const data = await res.json();
+    if (data.id) return `✅ Playlist criada: **${data.snippet.title}**\nID: \`${data.id}\`\n[Abrir no YouTube](https://youtube.com/playlist?list=${data.id})`;
+    return '❌ Erro ao criar playlist: ' + JSON.stringify(data.error?.message);
+  }
+
+  if (type === 'search') {
+    const params = new URLSearchParams({ part: 'snippet', q: payload.q, maxResults: payload.maxResults || 5, type: 'video' });
+    const res = await fetch(base + '/search?' + params, { headers });
+    const data = await res.json();
+    const items = data.items || [];
+    return items.map((v, i) => `${i+1}. **${v.snippet.title}**\n   ID: \`${v.id.videoId}\`\n   [Abrir](https://youtube.com/watch?v=${v.id.videoId})`).join('\n\n');
+  }
+
+  if (type === 'add_video') {
+    const res = await fetch(base + '/playlistItems?part=snippet', {
+      method: 'POST', headers,
+      body: JSON.stringify({ snippet: { playlistId: payload.playlistId, resourceId: { kind: 'youtube#video', videoId: payload.videoId } } })
+    });
+    const data = await res.json();
+    if (data.id) return `✅ Vídeo adicionado à playlist!`;
+    return '❌ Erro: ' + JSON.stringify(data.error?.message);
+  }
+
+  return 'Ação desconhecida: ' + type;
+}
+
+// ── Message handling ──────────────────────────────────────────────
 async function sendMessage() {
   const input = document.getElementById('user-input');
   const text = input.value.trim();
@@ -322,125 +333,83 @@ async function sendMessage() {
 
   input.value = '';
   input.style.height = 'auto';
-  addMessage('user', text);
+  addMsg('user', text);
   messages.push({ role: 'user', content: text });
-
   setLoading(true);
 
   try {
-    const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${getKey()}`,
-        'Content-Type': 'application/json',
-        'HTTP-Referer': window.location.origin,
-        'X-Title': 'Pulso'
-      },
-      body: JSON.stringify({
-        model: 'anthropic/claude-sonnet-4-5',
-        messages: [{ role: 'system', content: SYSTEM_PROMPT }, ...messages],
-        max_tokens: 4096,
-        stream: false
-      })
-    });
-
-    if (!res.ok) {
-      const err = await res.json();
-      throw new Error(err.error?.message || `HTTP ${res.status}`);
-    }
-
-    const data = await res.json();
-    const reply = data.choices[0].message.content;
+    const reply = await callGemini(text);
     messages.push({ role: 'assistant', content: reply });
 
-    // Check for generated app
+    // Check for app generation
     const appMatch = reply.match(/<APP_HTML\s+nome="([^"]+)"\s+titulo="([^"]+)">([\s\S]*?)<\/APP_HTML>/);
+    // Check for YouTube action
+    const ytMatch = reply.match(/<YT_ACTION\s+type="([^"]+)">([\s\S]*?)<\/YT_ACTION>/);
+
     if (appMatch) {
       const [, nome, titulo, html] = appMatch;
-      const cleanText = reply.replace(/<APP_HTML[\s\S]*?<\/APP_HTML>/, '').trim();
-      if (cleanText) addMessage('ai', cleanText);
-      addAppCard(nome, titulo, html);
+      const clean = reply.replace(/<APP_HTML[\s\S]*?<\/APP_HTML>/, '').trim();
+      if (clean) addMsg('ai', clean);
+      const blob = new Blob([html], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
+      const card = document.createElement('div');
+      card.className = 'action-card';
+      card.innerHTML = `<h3>✅ App: ${titulo}</h3><p>Gerado agora pelo Pulso</p><a class="btn" href="${url}" target="_blank">Abrir app →</a>`;
+      document.getElementById('messages').appendChild(card);
+    } else if (ytMatch) {
+      const [, type, rawJson] = ytMatch;
+      let payload;
+      try { payload = JSON.parse(rawJson.trim()); } catch { payload = {}; }
+      const clean = reply.replace(/<YT_ACTION[\s\S]*?<\/YT_ACTION>/, '').trim();
+      if (clean) addMsg('ai', clean);
+      setLoading(true);
+      const result = await executeYTAction(type, payload);
+      addMsg('ai', result);
     } else {
-      addMessage('ai', reply);
+      addMsg('ai', reply);
     }
-
   } catch (e) {
-    addMessage('ai', `Erro: ${e.message}`);
+    addMsg('ai', `Erro: ${e.message}`);
   } finally {
     setLoading(false);
   }
 }
 
-function addMessage(role, text) {
+function addMsg(role, text) {
   const div = document.createElement('div');
-  div.className = `msg ${role}`;
-  // Simple markdown: bold, code blocks
+  div.className = 'msg ' + role;
   div.innerHTML = text
     .replace(/```([\s\S]*?)```/g, '<pre>$1</pre>')
-    .replace(/`([^`]+)`/g, '<code style="background:#1a1a1a;padding:2px 5px;border-radius:4px">$1</code>')
+    .replace(/`([^`]+)`/g, '<code style="background:#1a1a1a;padding:2px 5px;border-radius:4px;font-size:12px">$1</code>')
     .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+    .replace(/\[([^\]]+)\]\((https?:[^)]+)\)/g, '<a href="$2" target="_blank" style="color:var(--accent)">$1</a>')
     .replace(/\n/g, '<br/>');
   document.getElementById('messages').appendChild(div);
-  scrollBottom();
-}
-
-function addAppCard(nome, titulo, html) {
-  // Save app to localStorage
-  const apps = JSON.parse(localStorage.getItem('pulso_apps') || '{}');
-  apps[nome] = { titulo, html, created: new Date().toISOString() };
-  localStorage.setItem('pulso_apps', JSON.stringify(apps));
-
-  // Open app in new tab
-  const blob = new Blob([html], { type: 'text/html' });
-  const url = URL.createObjectURL(blob);
-
-  const card = document.createElement('div');
-  card.className = 'app-card';
-  card.innerHTML = `
-    <h3>✅ App criado: ${titulo}</h3>
-    <p>Salvo localmente como "${nome}"</p>
-    <a href="${url}" target="_blank">Abrir app →</a>
-  `;
-  document.getElementById('messages').appendChild(card);
-  scrollBottom();
+  document.getElementById('messages').scrollTop = 99999;
 }
 
 function setLoading(val) {
   isLoading = val;
   document.getElementById('send-btn').disabled = val;
-  const existing = document.getElementById('typing-indicator');
-  if (val && !existing) {
+  const ex = document.getElementById('typing-indicator');
+  if (val && !ex) {
     const t = document.createElement('div');
-    t.id = 'typing-indicator';
-    t.className = 'msg ai';
+    t.id = 'typing-indicator'; t.className = 'msg ai';
     t.innerHTML = '<div class="typing"><span></span><span></span><span></span></div>';
     document.getElementById('messages').appendChild(t);
-    scrollBottom();
-  } else if (!val && existing) {
-    existing.remove();
-  }
+    document.getElementById('messages').scrollTop = 99999;
+  } else if (!val && ex) { ex.remove(); }
 }
 
-function scrollBottom() {
-  const m = document.getElementById('messages');
-  m.scrollTop = m.scrollHeight;
-}
-
-// Auto-resize textarea
 document.getElementById('user-input').addEventListener('input', function() {
   this.style.height = 'auto';
   this.style.height = Math.min(this.scrollHeight, 120) + 'px';
 });
-
-// Send on Enter (not Shift+Enter)
 document.getElementById('user-input').addEventListener('keydown', function(e) {
-  if (e.key === 'Enter' && !e.shiftKey) {
-    e.preventDefault();
-    sendMessage();
-  }
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
 });
 
-// Init
+handleOAuthRedirect();
 init();
 </script>
 </body>
