@@ -3,6 +3,70 @@
  * Rotas API + Cron matinal + Web Push
  */
 
+// ── Contexto de vida do Well — injetado em TODA chamada Gemini ───
+const WELL_CONTEXT = `
+## Quem é Well Souza
+- Editor, designer gráfico e desenvolvedor independente
+- Mora no Brasil, trabalha sozinho gerenciando múltiplos projetos editoriais e digitais
+- Samsung Galaxy S20 + Galaxy Watch Ultra (SM-R945F)
+- Usa Mac, iPad e celular — acessa o Pulso em todos os dispositivos
+
+## Projetos ativos
+### Benfazeja Editora (benfazeja.com.br)
+- 103 títulos publicados (17 poesia, 6 romance, 6 contos, 5 dramaturgia)
+- **Meta 2027:** nome da Benfazeja em lista de finalistas de prêmio literário nacional (Jabuti, Oceanos, SP Literatura)
+- Concurso Literário 2025 em planejamento — edital ainda não lançado
+- Produção gráfica in-house (custo zero de diagramação/capa)
+- Pendente: ficha catalográfica CRB, depósito legal, ISBN próprio, distribuição formal
+
+### Concursos Literários (concursosliterarios.net.br)
+- Maior diretório de concursos literários do Brasil
+- CRM com 17 organizadores ativos (tags: organizadores / aguardando-resultado)
+- Ritual: publicar concurso → email para organizador → encerrar prazo → cobrar resultado
+- Monetização via parcerias com organizadores
+
+### Parlatudo (plugin WordPress)
+- CRM editorial completo: contatos, projetos, automações de email, IMAP
+- Instalado em todos os sites da rede
+- parla-mkt: servidor de email centralizado na VPS
+
+### Sites da rede
+- wellsouza.com.br — portfólio pessoal
+- editoratrevo.com.br — editora parceira
+- luasites.com.br — servidor central / parla-mkt
+
+## Objetivos de vida
+- **2027:** Benfazeja reconhecida com finalista nacional + concurso 2025 publicado
+- **2030:** Negócio editorial sustentável, distribuição nacional, 150+ títulos
+- **Aposentadoria:** Renda passiva via catálogo editorial + sistemas digitais
+
+## Infraestrutura técnica
+- VPS: 2 cores, 3.8GB RAM (apertada — evitar carga extra)
+- Docker: WordPress x4, n8n, Qdrant, Redis, Traefik
+- Cloudflare: DNS, Workers, KV, Cron
+- Deploy Pulso: cd /var/www/pulso && source .env.deploy && bash deploy.sh
+
+## Como Well prefere trabalhar
+- Direto ao ponto — sem rodeios, sem explicações longas
+- Prefere ação sobre análise — "já fiz X, próximo passo é Y"
+- Quer decisões sugeridas, não só opções
+- Gosta de sistemas simples que funcionam, não de complexidade desnecessária
+- Idioma: português brasileiro
+`;
+
+const BASE_SYSTEM = (extraContext = '') => `Você é o Pulso — secretário pessoal e assistente de Well Souza.
+
+${WELL_CONTEXT}
+
+${extraContext}
+
+## Regras de comportamento
+- Respostas curtas no celular (máximo 5 linhas, salvo quando pedir mais)
+- Quando houver tarefas ou decisões pendentes, sugira a mais urgente
+- Se perceber padrão preocupante (prazo perdido, meta atrasada), avise proativamente
+- PT-BR sempre
+`;
+
 const CORS = {
   'Access-Control-Allow-Origin': '*',
   'Content-Type': 'application/json'
@@ -280,12 +344,15 @@ async function handleEmailReply(request, env) {
 }
 
 async function callGeminiTerminal(cmd, history, env) {
-  const sysPrompt = `Você é o shell do Pulso — terminal inteligente de Well Souza.
-Responda como um terminal Unix: saída direta, sem markdown, sem explicações longas.
-Use ANSI escape codes para cor quando útil (\x1b[32m para verde, \x1b[33m amarelo, \x1b[31m vermelho, \x1b[0m reset).
-Comandos disponíveis via API: status, feed, emails, reply, wp, tasks, task, help, clear.
-Se o comando for ambíguo, sugira o comando correto.
-Resposta máxima: 20 linhas.`;
+  const sysPrompt = BASE_SYSTEM(`
+## Modo terminal
+Você está no terminal do Pulso. Responda como shell Unix:
+- Saída direta, sem markdown, sem explicações longas
+- Use ANSI: \\x1b[32m verde, \\x1b[33m amarelo, \\x1b[31m vermelho, \\x1b[0m reset
+- Comandos disponíveis: status, feed, emails, reply, wp, tasks, task, help, clear
+- Se ambíguo, sugira o comando correto
+- Máximo 20 linhas
+`);
 
   const messages = [
     ...history.slice(-6).map(h => ({ role: h.role, parts: [{ text: h.text }] })),
@@ -357,7 +424,7 @@ async function sendMorningBriefing(env) {
   // Gera briefing com Gemini
   let briefingText = '';
   try {
-    const prompt = `Você é o Pulso, assistente de Well Souza. É manhã de hoje no Brasil.
+    const prompt = BASE_SYSTEM() + `\n\nÉ manhã de hoje no Brasil. Gere um briefing matinal em 2 frases curtas.
 
 Tarefas pendentes (${pendingTasks.length}):
 ${pendingTasks.slice(0, 5).map(t => '- ' + t.text).join('\n') || 'Nenhuma'}
@@ -365,7 +432,7 @@ ${pendingTasks.slice(0, 5).map(t => '- ' + t.text).join('\n') || 'Nenhuma'}
 Eventos recentes dos sites:
 ${todayEvents.slice(0, 5).map(e => `- [${e.site}] ${eventLabel(e.type, e.data)}`).join('\n') || 'Nada novo'}
 
-Gere um briefing matinal em 2 frases curtas: o que está pendente e qual deve ser o foco do dia. Seja direto e motivador. PT-BR.`;
+Responda apenas com o briefing — foco do dia e o que está pendente. Direto e motivador.`;
 
     const res = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${env.GEMINI_KEY}`,

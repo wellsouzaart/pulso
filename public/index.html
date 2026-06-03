@@ -371,7 +371,8 @@ const S = {
 };
 
 // ── Constants ────────────────────────────────────────────────────
-const DEFAULT_GEMINI_KEY = 'AIzaSyDcbvEGd5-YW3cP-J8cZiIDMDoFAnx3RpI';
+const DEFAULT_GEMINI_KEY   = 'AIzaSyDcbvEGd5-YW3cP-J8cZiIDMDoFAnx3RpI';
+const DEFAULT_GOOGLE_CID   = '519265717140-sspsr7do8gebh305kbfa1l6spe5vdveq.apps.googleusercontent.com';
 const DEFAULT_YT_KEY     = 'AIzaSyDcbvEGd5-YW3cP-J8cZiIDMDoFAnx3RpI';
 const GEMINI_MODEL = 'gemini-2.0-flash';
 const GEMINI_API = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
@@ -695,18 +696,34 @@ function prevTrack() { if (currentIndex > 0) playTrack(currentIndex - 1); }
 // ── Gemini ────────────────────────────────────────────────────────
 const SYSTEM = `Você é o Pulso — secretário pessoal de Well Souza.
 
-Capacidades disponíveis:
-- Player de música (YouTube e Spotify integrados)
-- Agenda Google Calendar
+## Quem é Well
+Editor, designer e desenvolvedor independente. Samsung S20 + Galaxy Watch Ultra.
+Acessa o Pulso no celular, iPad e Mac.
+
+## Projetos ativos
+- Benfazeja Editora: 103 títulos, META 2027 = finalista prêmio literário nacional, concurso 2025 a lançar
+- Concursosliterarios.net.br: diretório de concursos, 17 organizadores no CRM
+- Parlatudo: plugin CRM WordPress em todos os sites da rede
+- Sites: wellsouza.com.br, benfazeja.com.br, editoratrevo.com.br, luasites.com.br
+
+## Objetivos
+- 2027: Benfazeja reconhecida nacionalmente (finalista Jabuti, Oceanos ou SP Literatura)
+- 2030: negócio editorial sustentável, 150+ títulos, distribuição nacional
+- Aposentadoria: renda passiva via catálogo + sistemas digitais
+
+## Capacidades do Pulso
+- Player YouTube e Spotify
+- Google Calendar e Fit (quando conectados)
 - Criar mini-apps HTML
+- Terminal para gerenciar sites
 
-Quando pedirem música, responda com:
-<PLAY_MUSIC query="nome artista ou música">
+## Ações especiais
+Música → <PLAY_MUSIC query="artista ou música">
+App   → <APP_HTML nome="slug" titulo="Título"><!DOCTYPE html>...</APP_HTML>
 
-Quando pedirem app, gere HTML completo:
-<APP_HTML nome="slug" titulo="Título"><!DOCTYPE html>...</APP_HTML>
-
-Seja direto. PT-BR. Respostas curtas no celular.`;
+## Como responder
+Direto ao ponto. Respostas curtas no celular (máx 5 linhas).
+Sugira o próximo passo concreto quando relevante. PT-BR.`;
 
 async function callGemini(text) {
   const key = S.get('gemini_key');
@@ -1168,8 +1185,9 @@ handleOAuthRedirect();
 // Entry point
 if (S.get('pulso_auth') === '1') {
   document.getElementById('login').style.display = 'none';
-  if (!S.get('gemini_key')) S.set('gemini_key', DEFAULT_GEMINI_KEY);
-  if (!S.get('yt_api_key')) S.set('yt_api_key', DEFAULT_YT_KEY);
+  if (!S.get('gemini_key'))      S.set('gemini_key', DEFAULT_GEMINI_KEY);
+  if (!S.get('yt_api_key'))      S.set('yt_api_key', DEFAULT_YT_KEY);
+  if (!S.get('google_client_id'))S.set('google_client_id', DEFAULT_GOOGLE_CID);
   init();
   initDia();
   initTerminal();
