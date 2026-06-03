@@ -102,9 +102,16 @@
   .s-btn{width:100%;background:var(--accent);color:white;border:none;border-radius:10px;padding:12px;font-size:15px;font-weight:700;cursor:pointer;margin-top:8px}
   .s-btn.sec{background:var(--surface);border:1px solid var(--border);color:var(--text)}
 
-  /* ── SETUP ── */
-  #setup{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 24px;gap:18px;z-index:100}
-  #setup h1{font-size:40px;font-weight:800;color:var(--accent)}
+  /* ── LOGIN / SETUP ── */
+  #login{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 24px;gap:18px;z-index:100}
+  #login h1{font-size:40px;font-weight:800;color:var(--accent)}
+  #login p{color:var(--muted);text-align:center;font-size:14px;line-height:1.6}
+  #login input{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 16px;color:var(--text);font-size:16px;outline:none}
+  #login input:focus{border-color:var(--accent)}
+  #login button{width:100%;background:var(--accent);color:white;border:none;border-radius:12px;padding:14px;font-size:16px;font-weight:700;cursor:pointer}
+  #login .err{font-size:13px;color:#f87171;text-align:center;display:none}
+  #setup{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 24px;gap:18px;z-index:99;display:none}
+  #setup h2{font-size:22px;font-weight:700}
   #setup p{color:var(--muted);text-align:center;font-size:14px;line-height:1.6}
   #setup input{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 16px;color:var(--text);font-size:16px;outline:none}
   #setup input:focus{border-color:var(--accent)}
@@ -118,13 +125,23 @@
 </head>
 <body>
 
-<!-- Setup -->
-<div id="setup">
+<!-- Login -->
+<div id="login">
   <h1>Pulso</h1>
-  <p>Seu secretário pessoal.<br/>Música, agenda, APIs e muito mais.</p>
+  <p>Seu secretário pessoal.</p>
+  <input type="password" id="login-pass" placeholder="Senha" autocomplete="current-password"
+    onkeydown="if(event.key==='Enter')doLogin()"/>
+  <button onclick="doLogin()" id="login-btn">Entrar</button>
+  <div class="err" id="login-err">Senha incorreta</div>
+</div>
+
+<!-- First-time setup (after login, no settings saved yet) -->
+<div id="setup">
+  <h2>Configuração inicial</h2>
+  <p>Cole sua chave Gemini para ativar o assistente.</p>
   <input type="password" id="setup-gemini" placeholder="Chave Gemini (AIza...)" autocomplete="off"/>
-  <button onclick="doSetup()">Entrar</button>
-  <p class="hint">Chave salva só no seu dispositivo.<br/>Obtenha grátis em <a href="https://aistudio.google.com/apikey" target="_blank">aistudio.google.com/apikey</a></p>
+  <button onclick="doSetup()">Salvar e entrar</button>
+  <p class="hint">Obtenha grátis em <a href="https://aistudio.google.com/apikey" target="_blank">aistudio.google.com/apikey</a></p>
 </div>
 
 <!-- Header -->
@@ -248,17 +265,78 @@ let isPlaying = false;
 let googleToken = null;
 let spotifyToken = null;
 
-// ── Setup ────────────────────────────────────────────────────────
+// ── Auth ─────────────────────────────────────────────────────────
+async function doLogin() {
+  const pass = document.getElementById('login-pass').value;
+  const btn = document.getElementById('login-btn');
+  const err = document.getElementById('login-err');
+  if (!pass) return;
+  btn.textContent = '...'; btn.disabled = true; err.style.display = 'none';
+  try {
+    const res = await fetch('/api/auth', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ action: 'login', password: pass })
+    });
+    const data = await res.json();
+    if (data.ok) {
+      S.set('pulso_token', data.token);
+      document.getElementById('login').style.display = 'none';
+      await loadSettings();
+    } else {
+      err.style.display = 'block';
+    }
+  } catch(e) {
+    err.textContent = 'Erro: ' + e.message; err.style.display = 'block';
+  } finally { btn.textContent = 'Entrar'; btn.disabled = false; }
+}
+
+async function loadSettings() {
+  const token = S.get('pulso_token');
+  if (!token) return;
+  try {
+    const res = await fetch('/api/settings?token=' + token);
+    const data = await res.json();
+    if (data.ok && data.settings) {
+      const cfg = data.settings;
+      if (cfg.gemini_key) S.set('gemini_key', cfg.gemini_key);
+      if (cfg.yt_api_key) S.set('yt_api_key', cfg.yt_api_key);
+      if (cfg.google_client_id) S.set('google_client_id', cfg.google_client_id);
+    }
+  } catch(e) { console.warn('loadSettings:', e); }
+  if (!S.get('gemini_key')) {
+    document.getElementById('setup').style.display = 'flex';
+  } else {
+    init();
+  }
+}
+
+async function syncSettings() {
+  const token = S.get('pulso_token');
+  if (!token) return;
+  const settings = {
+    gemini_key: S.get('gemini_key'),
+    yt_api_key: S.get('yt_api_key'),
+    google_client_id: S.get('google_client_id')
+  };
+  await fetch('/api/settings', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ token, settings })
+  });
+}
+
+// ── Setup (first time) ────────────────────────────────────────────
 function doSetup() {
   const k = document.getElementById('setup-gemini').value.trim();
   if (!k.startsWith('AIza')) { alert('Chave inválida. Deve começar com AIza'); return; }
   S.set('gemini_key', k);
+  syncSettings();
   document.getElementById('setup').style.display = 'none';
   init();
 }
 
 function init() {
   if (!S.get('gemini_key')) return;
+  document.getElementById('login').style.display = 'none';
   document.getElementById('setup').style.display = 'none';
   document.getElementById('today-label').textContent =
     new Date().toLocaleDateString('pt-BR', {weekday:'long', day:'numeric', month:'long'});
@@ -285,8 +363,9 @@ function saveSettings() {
   if (g) S.set('gemini_key', g);
   if (yk) S.set('yt_api_key', yk);
   if (gc) S.set('google_client_id', gc);
+  syncSettings();
   showTab('chat');
-  addMsg('ai', '✅ Configurações salvas!');
+  addMsg('ai', '✅ Configurações salvas e sincronizadas!');
 }
 
 function clearAll() {
@@ -631,7 +710,32 @@ document.getElementById('user-input').addEventListener('keydown', function(e) {
 });
 
 handleOAuthRedirect();
-init();
+
+// Entry point: check if already logged in
+(async () => {
+  const token = S.get('pulso_token');
+  if (!token) return; // show login screen
+  // Verify token still valid
+  try {
+    const res = await fetch('/api/auth', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ action: 'verify', token })
+    });
+    const data = await res.json();
+    if (data.ok) {
+      document.getElementById('login').style.display = 'none';
+      await loadSettings();
+    } else {
+      S.del('pulso_token');
+    }
+  } catch(e) {
+    // If API fails (local dev), fallback to local key
+    if (S.get('gemini_key')) {
+      document.getElementById('login').style.display = 'none';
+      init();
+    }
+  }
+})();
 </script>
 </body>
 </html>
